@@ -26,3 +26,7 @@ npm-debug.log*
 # Cache
 .cache/
 .parcel-cache/
+.cursor/mcp.json
+
+# Secrets
+secrets.txt
