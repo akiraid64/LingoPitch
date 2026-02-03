@@ -1,11 +1,15 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { useLanguageStore } from '@/store/languageStore';
 import { Header } from '@/components/Header';
+import ProtectedRoute from '@/components/ProtectedRoute';
 import { HomePage } from '@/pages/HomePage';
 import { ArenaPage } from '@/pages/ArenaPage';
 import { AnalyzePage } from '@/pages/AnalyzePage';
 import { DashboardPage } from '@/pages/DashboardPage';
+import LoginPage from '@/pages/LoginPage';
+import SignupPage from '@/pages/SignupPage';
 
 function App() {
     const { loadAvailableLanguages } = useLanguageStore();
@@ -17,17 +21,48 @@ function App() {
 
     return (
         <Router>
-            <div className="min-h-screen bg-dark-50">
-                <Header />
-                <Routes>
-                    <Route path="/" element={<HomePage />} />
-                    <Route path="/arena" element={<ArenaPage />} />
-                    <Route path="/analyze" element={<AnalyzePage />} />
-                    <Route path="/dashboard" element={<DashboardPage />} />
-                </Routes>
-            </div>
+            <AuthProvider>
+                <div className="min-h-screen bg-dark-50">
+                    <Routes>
+                        {/* Public routes */}
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/signup" element={<SignupPage />} />
+
+                        {/* Protected routes */}
+                        <Route
+                            path="/arena"
+                            element={
+                                <ProtectedRoute>
+                                    <Header />
+                                    <ArenaPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/analyze"
+                            element={
+                                <ProtectedRoute>
+                                    <Header />
+                                    <AnalyzePage />
+                                </ProtectedRoute>
+                            }
+                        />
+                        <Route
+                            path="/dashboard"
+                            element={
+                                <ProtectedRoute>
+                                    <Header />
+                                    <DashboardPage />
+                                </ProtectedRoute>
+                            }
+                        />
+                    </Routes>
+                </div>
+            </AuthProvider>
         </Router>
     );
 }
 
 export default App;
+

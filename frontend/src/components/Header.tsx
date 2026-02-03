@@ -1,8 +1,40 @@
 import { Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Globe2, Menu, X } from 'lucide-react';
+import { Globe2, Menu, X, LogOut, User } from 'lucide-react';
 import { useState } from 'react';
 import { LanguageSelector } from './LanguageSelector';
+import { useAuth } from '../contexts/AuthContext';
+
+function AuthButton() {
+    const { user, signOut } = useAuth();
+
+    if (!user) {
+        return (
+            <Link
+                to="/login"
+                className="neobrutalism-btn bg-primary-500 text-white text-sm px-4 py-2"
+            >
+                Login
+            </Link>
+        );
+    }
+
+    return (
+        <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2 px-3 py-2 bg-light-100 border-3 border-black">
+                <User className="w-4 h-4" />
+                <span className="text-sm font-bold">{user.email}</span>
+            </div>
+            <button
+                onClick={() => signOut()}
+                className="neobrutalism-btn bg-error-500 text-white text-sm px-4 py-2 flex items-center gap-2"
+            >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden md:inline">Logout</span>
+            </button>
+        </div>
+    );
+}
 
 export function Header() {
     const location = useLocation();
@@ -57,6 +89,9 @@ export function Header() {
                     {/* Right Side */}
                     <div className="flex items-center gap-4">
                         <LanguageSelector />
+
+                        {/* Auth UI */}
+                        <AuthButton />
 
                         {/* Mobile Menu Button */}
                         <button
