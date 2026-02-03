@@ -1,0 +1,32 @@
+{
+    "name": "@lingopitch/backend",
+    "private": true,
+    "version": "0.1.0",
+    "type": "module",
+    "scripts": {
+        "dev": "tsx watch --env-file=.env src/index.ts",
+        "build": "tsc",
+        "start": "node dist/index.js",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "@google/generative-ai": "^0.21.0",
+        "@langchain/textsplitters": "^1.0.1",
+        "@supabase/supabase-js": "^2.90.1",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.21.0",
+        "helmet": "^8.0.0",
+        "livekit-server-sdk": "^2.15.0",
+        "multer": "^2.0.2",
+        "pdf-parse": "^1.1.1"
+    },
+    "devDependencies": {
+        "@types/cors": "^2.8.17",
+        "@types/express": "^5.0.0",
+        "@types/multer": "^2.0.0",
+        "@types/node": "^22.14.0",
+        "tsx": "^4.19.0",
+        "typescript": "~5.8.2"
+    }
+}
