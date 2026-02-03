@@ -1,0 +1,130 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-black;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-dark-50 text-dark-900 font-body;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 12px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-dark-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-dark-800 border-4 border-black;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary-500;
+  }
+}
+
+@layer components {
+
+  /* Neobrutalism Button */
+  .btn-brutal {
+    @apply px-6 py-3 font-display font-bold text-lg uppercase tracking-wide border-4 border-black bg-primary-400 text-black shadow-brutal transition-all duration-200 hover:translate-x-1 hover:translate-y-1 hover:shadow-brutal-sm active:translate-x-2 active:translate-y-2 active:shadow-none;
+  }
+
+  .btn-brutal-secondary {
+    @apply px-6 py-3 font-display font-bold text-lg uppercase tracking-wide border-4 border-black bg-accent-300 text-dark-900 shadow-brutal transition-all duration-200 hover:translate-x-1 hover:translate-y-1 hover:shadow-brutal-sm active:translate-x-2 active:translate-y-2 active:shadow-none;
+  }
+
+  .btn-brutal-outline {
+    @apply px-6 py-3 font-display font-bold text-lg uppercase tracking-wide border-4 border-black bg-white text-black shadow-brutal transition-all duration-200 hover:bg-dark-100 hover:translate-x-1 hover:translate-y-1 hover:shadow-brutal-sm active:translate-x-2 active:translate-y-2 active:shadow-none;
+  }
+
+  /* Glass Card */
+  .glass-card {
+    @apply backdrop-blur-xl bg-white/70 border-4 border-black shadow-brutal p-6 rounded-none;
+  }
+
+  .glass-card-dark {
+    @apply backdrop-blur-xl bg-dark-900/70 border-4 border-black shadow-brutal p-6 rounded-none text-white;
+  }
+
+  /* Brutal Card */
+  .brutal-card {
+    @apply bg-white border-4 border-black shadow-brutal-lg p-6 transition-all duration-200 hover:translate-x-1 hover:translate-y-1 hover:shadow-brutal;
+  }
+
+  /* Input Brutal */
+  .input-brutal {
+    @apply w-full px-4 py-3 border-4 border-black font-mono text-lg bg-white focus:outline-none focus:ring-4 focus:ring-primary-400 transition-all duration-200;
+  }
+
+  /* Language Badge */
+  .language-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 bg-accent-200 border-4 border-black font-display font-bold text-sm uppercase shadow-brutal-sm;
+  }
+
+  /* Section Title */
+  .section-title {
+    @apply font-display font-bold text-5xl md:text-6xl lg:text-7xl uppercase tracking-tight mb-8 relative inline-block;
+  }
+
+  .section-title::after {
+    content: '';
+    @apply absolute -bottom-2 left-0 w-1/3 h-2 bg-primary-400 border-4 border-black;
+  }
+
+  /* Parallax Container */
+  .parallax-section {
+    @apply relative overflow-hidden;
+  }
+
+  /* Gradient Text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-primary-500 via-accent-500 to-primary-500 bg-clip-text text-transparent bg-[length:200%_auto] animate-shimmer;
+  }
+
+  /* Score Badge */
+  .score-badge {
+    @apply inline-flex items-center justify-center w-16 h-16 border-4 border-black font-display font-bold text-2xl shadow-brutal-sm;
+  }
+}
+
+@layer utilities {
+  .text-stroke {
+    -webkit-text-stroke: 2px black;
+  }
+
+  .text-outline {
+    text-shadow:
+      -2px -2px 0 #000,
+      2px -2px 0 #000,
+      -2px 2px 0 #000,
+      2px 2px 0 #000;
+  }
+}
+
+/* Custom animations */
+@keyframes pulse-border {
+
+  0%,
+  100% {
+    border-color: black;
+  }
+
+  50% {
+    border-color: #f49233;
+  }
+}
+
+.animate-pulse-border {
+  animation: pulse-border 2s ease-in-out infinite;
+}
