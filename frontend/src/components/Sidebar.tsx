@@ -28,8 +28,8 @@ export default function Sidebar() {
         { id: 'team', label: 'Team', icon: Globe2, path: '/team', managerOnly: true },
         { id: 'call-history', label: 'Call History', icon: Phone, path: '/call-history' },
         { id: 'progress', label: 'My Progress', icon: TrendingUp, path: '/progress' },
-        { id: 'playbooks', label: 'Playbooks', icon: BookOpen, path: '/playbooks', managerOnly: true },
-        { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', managerOnly: true },
+        { id: 'playbooks', label: 'Playbooks', icon: BookOpen, path: '/playbooks' },
+        { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
     ];
 
     const handleLogout = async () => {

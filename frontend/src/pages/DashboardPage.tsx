@@ -30,9 +30,9 @@ export function DashboardPage() {
                         Dashboard
                     </h1>
                     <div className="flex items-center gap-2">
-                        <div className={`px-3 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${profile?.role === 'sales_manager' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-white'
+                        <div className={`px-3 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${profile?.role === 'sales_manager' || profile?.role === 'manager' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-white'
                             }`}>
-                            {profile?.role === 'sales_manager' ? 'Mission Command' : 'Field Agent'}
+                            {profile?.role === 'sales_manager' || profile?.role === 'manager' ? 'Mission Command' : 'Field Agent'}
                         </div>
                         <p className="text-gray-600 font-bold uppercase text-xs tracking-widest pl-2">
                             {profile?.full_name || 'Agent'}'s Current Status
@@ -41,7 +41,7 @@ export function DashboardPage() {
                 </div>
 
                 {/* Organization Details for Managers */}
-                {profile?.role === 'sales_manager' && profile?.organizations && (
+                {(profile?.role === 'sales_manager' || profile?.role === 'manager') && profile?.organizations && (
                     <div className="flex bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] divide-x-4 divide-black">
                         <div className="px-6 py-4 flex flex-col justify-center">
                             <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Company</p>

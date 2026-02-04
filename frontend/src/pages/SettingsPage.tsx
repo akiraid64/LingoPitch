@@ -52,9 +52,9 @@ export function SettingsPage() {
                     </div>
                     <div>
                         <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Role</label>
-                        <div className={`inline-block px-3 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${profile?.role === 'sales_manager' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-white'
+                        <div className={`inline-block px-3 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${profile?.role === 'sales_manager' || profile?.role === 'manager' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-white'
                             }`}>
-                            {profile?.role === 'sales_manager' ? 'Mission Command' : 'Field Agent'}
+                            {profile?.role === 'sales_manager' || profile?.role === 'manager' ? 'Mission Command' : 'Field Agent'}
                         </div>
                     </div>
                     {profile?.organizations && (
@@ -70,7 +70,7 @@ export function SettingsPage() {
             </div>
 
             {/* Join Organization (if not already in one) */}
-            {!profile?.organization_id && (
+            {!profile?.org_id && (
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
