@@ -19,11 +19,13 @@ export default function Sidebar() {
     const location = useLocation();
 
     const callLabMenuItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
         { id: 'analyze', label: 'New Analysis', icon: Sparkles, path: '/analyze' },
         { id: 'arena', label: 'Roleplay', icon: Swords, path: '/arena', badge: 'WIP' },
     ];
 
     const resourcesMenuItems = [
+        { id: 'team', label: 'Team', icon: Globe2, path: '/team', managerOnly: true },
         { id: 'call-history', label: 'Call History', icon: Phone, path: '/call-history' },
         { id: 'progress', label: 'My Progress', icon: TrendingUp, path: '/progress' },
         { id: 'playbooks', label: 'Playbooks', icon: BookOpen, path: '/playbooks', managerOnly: true },
