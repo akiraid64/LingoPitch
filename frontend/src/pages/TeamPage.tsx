@@ -34,22 +34,42 @@ export default function TeamPage() {
     useEffect(() => {
         const fetchData = async () => {
             if (!profile?.org_id) {
+                console.log('⚠️ TeamPage: No org_id in profile');
                 setLoading(false);
                 return;
             }
 
+            console.log('\n========================================');
+            console.log('👥 FETCHING TEAM DATA');
+            console.log('========================================');
+            console.log('Profile:', {
+                id: profile.id,
+                org_id: profile.org_id,
+                role: profile.role,
+                name: profile.full_name
+            });
+            console.log('User ID:', user?.id);
+            console.log('========================================\n');
+
             try {
                 // Fetch organization data
+                console.log('🔍 Step 1: Fetching organization data...');
                 const { data: orgData, error: orgError } = await supabase
                     .from('organizations')
                     .select('id, name, referral_code')
                     .eq('id', profile.org_id)
                     .single();
 
-                if (orgError) throw orgError;
+                if (orgError) {
+                    console.error('❌ Organization fetch failed:', orgError);
+                    throw orgError;
+                }
+                console.log('✅ Organization found:', orgData.name, '| Referral Code:', orgData.referral_code);
                 setOrganization(orgData);
 
                 // Fetch team members (exclude the current manager)
+                console.log('\n🔍 Step 2: Fetching team members...');
+                console.log('Query: profiles WHERE org_id =', profile.org_id, 'AND id !=', user?.id);
                 const { data, error: fetchError } = await supabase
                     .from('profiles')
                     .select('id, full_name, email, role, created_at')
@@ -57,10 +77,20 @@ export default function TeamPage() {
                     .neq('id', user?.id) // Exclude current user (manager)
                     .order('created_at', { ascending: false });
 
-                if (fetchError) throw fetchError;
+                if (fetchError) {
+                    console.error('❌ Team members fetch failed:', fetchError);
+                    throw fetchError;
+                }
+
+                console.log('✅ Found', data?.length || 0, 'team members (excluding self):');
+                data?.forEach((m, i) => {
+                    console.log(`  ${i + 1}. ${m.full_name} (${m.email}) - Role: ${m.role}`);
+                });
+                console.log('');
+
                 setTeamMembers(data || []);
             } catch (err: any) {
-                console.error('Error fetching team data:', err);
+                console.error('❌ Error fetching team data:', err);
                 setError(err.message);
             } finally {
                 setLoading(false);
