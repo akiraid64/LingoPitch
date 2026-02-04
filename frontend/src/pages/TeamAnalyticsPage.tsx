@@ -30,7 +30,17 @@ export default function TeamAnalyticsPage() {
     }, [profile, timePeriod]);
 
     const fetchTeamData = async () => {
-        if (!profile?.org_id) return;
+        if (!profile?.org_id) {
+            console.log('⚠️ Analytics: No org_id in profile');
+            return;
+        }
+
+        console.log('\n========================================');
+        console.log('📊 FETCHING TEAM ANALYTICS');
+        console.log('========================================');
+        console.log('Org ID:', profile.org_id);
+        console.log('Time Period:', timePeriod);
+        console.log('========================================\n');
 
         setLoading(true);
         const daysAgo = timePeriod === '7d' ? 7 : timePeriod === '30d' ? 30 : 90;
@@ -38,16 +48,23 @@ export default function TeamAnalyticsPage() {
         cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
 
         // Fetch all team members
+        console.log('🔍 Step 1: Fetching team members...');
         const { data: members, error: membersError } = await supabase
             .from('profiles')
             .select('id, full_name, email')
             .eq('org_id', profile.org_id);
 
         if (membersError) {
-            console.error('Error fetching team:', membersError);
+            console.error('❌ Error fetching team:', membersError);
             setLoading(false);
             return;
         }
+
+        console.log('✅ Found', members?.length || 0, 'team members:');
+        members?.forEach((m, i) => {
+            console.log(`  ${i + 1}. ${m.full_name} (${m.email})`);
+        });
+        console.log('');
 
         // Fetch calls and scores for each member
         const teamData: TeamMember[] = [];
