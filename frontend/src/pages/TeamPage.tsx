@@ -5,53 +5,72 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 
 interface TeamMember {
-    user_id: string;
+    id: string;
     full_name: string;
     email: string;
     role: string;
     created_at: string;
 }
 
+interface Organization {
+    id: string;
+    name: string;
+    referral_code: string;
+}
+
 export default function TeamPage() {
-    const { profile } = useAuth();
+    const { profile, user } = useAuth();
     const navigate = useNavigate();
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+    const [organization, setOrganization] = useState<Organization | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
     // Security check - only managers can access this page
-    if (profile && profile.role !== 'sales_manager') {
+    if (profile && profile.role !== 'sales_manager' && profile.role !== 'manager') {
         return <Navigate to="/dashboard" replace />;
     }
 
     useEffect(() => {
-        const fetchTeamMembers = async () => {
-            if (!profile?.organization_id) {
+        const fetchData = async () => {
+            if (!profile?.org_id) {
                 setLoading(false);
                 return;
             }
 
             try {
+                // Fetch organization data
+                const { data: orgData, error: orgError } = await supabase
+                    .from('organizations')
+                    .select('id, name, referral_code')
+                    .eq('id', profile.org_id)
+                    .single();
+
+                if (orgError) throw orgError;
+                setOrganization(orgData);
+
+                // Fetch team members (exclude the current manager)
                 const { data, error: fetchError } = await supabase
-                    .from('user_profiles')
-                    .select('user_id, full_name, email, role, created_at')
-                    .eq('organization_id', profile.organization_id)
+                    .from('profiles')
+                    .select('id, full_name, email, role, created_at')
+                    .eq('org_id', profile.org_id)
+                    .neq('id', user?.id) // Exclude current user (manager)
                     .order('created_at', { ascending: false });
 
                 if (fetchError) throw fetchError;
                 setTeamMembers(data || []);
             } catch (err: any) {
-                console.error('Error fetching team:', err);
+                console.error('Error fetching team data:', err);
                 setError(err.message);
             } finally {
                 setLoading(false);
             }
         };
 
-        fetchTeamMembers();
-    }, [profile?.organization_id]);
+        fetchData();
+    }, [profile?.org_id, user?.id]);
 
-    const activeAgents = teamMembers.filter(m => m.role === 'member').length;
+    const activeAgents = teamMembers.filter(m => m.role === 'rep').length;
     const totalMembers = teamMembers.length;
 
     return (
@@ -62,7 +81,7 @@ export default function TeamPage() {
                         Team <span className="text-blue-500">Command</span>
                     </h1>
                     <p className="text-gray-600 font-bold uppercase text-xs tracking-widest">
-                        {profile?.organizations?.name || 'Your Organization'}
+                        {organization?.name || 'Your Organization'}
                     </p>
                 </div>
             </header>
@@ -72,7 +91,7 @@ export default function TeamPage() {
                 {[
                     { label: 'Active Agents', value: activeAgents.toString(), color: 'blue' },
                     { label: 'Total Members', value: totalMembers.toString(), color: 'orange' },
-                    { label: 'Referral Code', value: profile?.organizations?.referral_code || 'N/A', color: 'green' },
+                    { label: 'Referral Code', value: organization?.referral_code || 'N/A', color: 'green' },
                 ].map((stat) => (
                     <div key={stat.label} className="p-6 bg-white border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
                         <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-1">{stat.label}</p>
@@ -105,7 +124,7 @@ export default function TeamPage() {
                             <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                             <h3 className="font-black text-xl uppercase mb-2">No Team Members Yet</h3>
                             <p className="text-gray-600 font-bold text-sm mb-6">
-                                Share your referral code <span className="px-2 py-1 bg-yellow-100 border-2 border-black font-black">{profile?.organizations?.referral_code}</span> with agents to build your team!
+                                Share your referral code <span className="px-2 py-1 bg-yellow-100 border-2 border-black font-black">{organization?.referral_code}</span> with agents to build your team!
                             </p>
                         </div>
                     ) : (
@@ -121,8 +140,8 @@ export default function TeamPage() {
                             <tbody>
                                 {teamMembers.map((member) => (
                                     <tr
-                                        key={member.user_id}
-                                        onClick={() => navigate(`/team/${member.user_id}`)}
+                                        key={member.id}
+                                        onClick={() => navigate(`/team/${member.id}`)}
                                         className="border-b-4 border-black hover:bg-blue-50 transition-colors cursor-pointer"
                                     >
                                         <td className="p-6">
@@ -136,9 +155,9 @@ export default function TeamPage() {
                                             </div>
                                         </td>
                                         <td className="p-6">
-                                            <span className={`px-3 py-1 border-2 border-black font-black text-[10px] uppercase ${member.role === 'sales_manager' ? 'bg-orange-400' : 'bg-blue-400 text-white'
+                                            <span className={`px-3 py-1 border-2 border-black font-black text-[10px] uppercase ${member.role === 'manager' ? 'bg-orange-400' : 'bg-blue-400 text-white'
                                                 }`}>
-                                                {member.role === 'sales_manager' ? 'Manager' : 'Agent'}
+                                                {member.role === 'manager' ? 'Manager' : 'Agent'}
                                             </span>
                                         </td>
                                         <td className="p-6 font-bold text-sm text-gray-600">{member.email}</td>
