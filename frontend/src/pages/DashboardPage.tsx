@@ -1,81 +1,190 @@
 import { motion } from 'framer-motion';
-import { TrendingUp, Award, Target } from 'lucide-react';
+import { TrendingUp, Award, Target, Copy, Building2, ShieldCheck, Users } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useState } from 'react';
 
 export function DashboardPage() {
+    const { profile } = useAuth();
+    console.log('Current Dashboard Profile:', profile);
+    const [copied, setCopied] = useState(false);
+
+    const copyReferral = () => {
+        const code = profile?.organizations?.referral_code;
+        if (code) {
+            navigator.clipboard.writeText(code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
     return (
-        <div className="min-h-screen bg-gradient-to-b from-dark-50 to-accent-50 py-12 px-4">
-            <div className="max-w-7xl mx-auto">
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="mb-12"
-                >
-                    <h1 className="font-display font-bold text-5xl md:text-6xl uppercase mb-4">
+        <div className="max-w-7xl mx-auto space-y-12 pb-20">
+            {/* Header Section */}
+            <motion.div
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col md:flex-row md:items-end justify-between gap-6"
+            >
+                <div>
+                    <h1 className="font-black text-5xl md:text-6xl uppercase tracking-tight mb-2">
                         Dashboard
                     </h1>
-                    <p className="text-xl text-dark-700 font-medium">
-                        Track your progress across languages and improve your cultural IQ.
-                    </p>
-                </motion.div>
-
-                {/* Stats Grid */}
-                <div className="grid md:grid-cols-3 gap-6 mb-12">
-                    {[
-                        { icon: TrendingUp, label: 'Avg Score', value: '78', change: '+12%' },
-                        { icon: Award, label: 'Cultural IQ', value: '85', change: '+8%' },
-                        { icon: Target, label: 'Calls Analyzed', value: '24', change: '+5' },
-                    ].map((stat, i) => (
-                        <motion.div
-                            key={i}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.1 }}
-                            className="brutal-card bg-white"
-                        >
-                            <div className="flex items-center justify-between mb-4">
-                                <stat.icon className="w-8 h-8 text-primary-600" />
-                                <span className="px-3 py-1 bg-accent-200 border-2 border-black
-                                 font-mono font-bold text-xs">
-                                    {stat.change}
-                                </span>
-                            </div>
-                            <div className="font-display font-bold text-4xl mb-1">
-                                {stat.value}
-                            </div>
-                            <div className="text-dark-600 font-mono text-sm uppercase">
-                                {stat.label}
-                            </div>
-                        </motion.div>
-                    ))}
+                    <div className="flex items-center gap-2">
+                        <div className={`px-3 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${profile?.role === 'sales_manager' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-white'
+                            }`}>
+                            {profile?.role === 'sales_manager' ? 'Mission Command' : 'Field Agent'}
+                        </div>
+                        <p className="text-gray-600 font-bold uppercase text-xs tracking-widest pl-2">
+                            {profile?.full_name || 'Agent'}'s Current Status
+                        </p>
+                    </div>
                 </div>
 
-                {/* Recent Activity */}
-                <div className="brutal-card bg-white">
-                    <h2 className="font-display font-bold text-2xl uppercase mb-6">
-                        Recent Activity
-                    </h2>
-                    <div className="space-y-4">
+                {/* Organization Details for Managers */}
+                {profile?.role === 'sales_manager' && profile?.organizations && (
+                    <div className="flex bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] divide-x-4 divide-black">
+                        <div className="px-6 py-4 flex flex-col justify-center">
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Company</p>
+                            <p className="font-black text-sm uppercase flex items-center gap-2">
+                                <Building2 className="w-4 h-4" />
+                                {profile.organizations.name}
+                            </p>
+                        </div>
+                        <div className="px-6 py-4 flex flex-col justify-center bg-gray-50">
+                            <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Referral Code</p>
+                            <div className="flex items-center gap-3">
+                                <span className="font-mono font-black text-lg text-orange-600 tracking-tighter">
+                                    {profile.organizations.referral_code}
+                                </span>
+                                <button
+                                    onClick={copyReferral}
+                                    className="p-1 border-2 border-black hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none"
+                                >
+                                    {copied ? <div className="text-[8px] font-bold px-1">COPIED</div> : <Copy className="w-3 h-3" />}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Organization Details for Members */}
+                {profile?.role === 'member' && profile?.organizations && (
+                    <div className="bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] px-6 py-4">
+                        <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Unit</p>
+                        <p className="font-black text-sm uppercase flex items-center gap-2">
+                            <ShieldCheck className="w-4 h-4 text-blue-600" />
+                            {profile.organizations.name}
+                        </p>
+                    </div>
+                )}
+            </motion.div>
+
+            {/* Stats Grid */}
+            <div className="grid md:grid-cols-3 gap-8">
+                {[
+                    { icon: TrendingUp, label: 'Avg Score', value: profile?.average_score || '0', color: 'orange' },
+                    { icon: Award, label: 'Cultural IQ', value: profile?.cultural_iq || '0', color: 'green' },
+                    { icon: Target, label: 'Missions', value: profile?.practice_count || '0', color: 'blue' },
+                ].map((stat, i) => (
+                    <motion.div
+                        key={stat.label}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.1 }}
+                        className="bg-white border-8 border-black p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]"
+                    >
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="p-3 border-4 border-black bg-gray-50">
+                                <stat.icon className="w-8 h-8" />
+                            </div>
+                        </div>
+                        <div className="font-black text-6xl mt-4 mb-2">{stat.value}</div>
+                        <div className="font-black text-gray-400 uppercase tracking-wide text-xs">
+                            {stat.label}
+                        </div>
+                    </motion.div>
+                ))}
+            </div>
+
+            {/* Main Content Area */}
+            <div className="grid lg:grid-cols-3 gap-8">
+                {/* Recent Missions */}
+                <div className="lg:col-span-2 bg-white border-8 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+                    <div className="p-6 border-b-8 border-black bg-gray-50 flex items-center justify-between">
+                        <h2 className="font-black uppercase tracking-tighter text-xl flex items-center gap-3">
+                            <TrendingUp className="w-6 h-6" />
+                            Recent Field Missions
+                        </h2>
+                        <button className="px-3 py-1 bg-black text-white text-[10px] font-black uppercase">View All</button>
+                    </div>
+                    <div className="p-6 space-y-4">
                         {[
-                            { lang: '🇯🇵', name: 'Japanese', score: 82, type: 'Practice' },
-                            { lang: '🇩🇪', name: 'German', score: 91, type: 'Analysis' },
-                            { lang: '🇮🇳', name: 'Hindi', score: 76, type: 'Practice' },
+                            { lang: '🇯🇵', name: 'Japanese', score: 82, type: 'Practiced cultural greeting nuances' },
+                            { lang: '🇩🇪', name: 'German', score: 91, type: 'Mastered direct business closure' },
+                            { lang: '🇮🇳', name: 'Hindi', score: 76, type: 'Building trust (Giri) roleplay' },
                         ].map((activity, i) => (
-                            <div
-                                key={i}
-                                className="flex items-center justify-between p-4 bg-dark-50 border-3 border-black"
-                            >
-                                <div className="flex items-center gap-4">
-                                    <div className="text-3xl">{activity.lang}</div>
+                            <div key={i} className="flex items-center justify-between p-6 border-4 border-black bg-white hover:bg-gray-50 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5">
+                                <div className="flex items-center gap-6">
+                                    <div className="text-4xl filter grayscale hover:grayscale-0 transition-all cursor-default">{activity.lang}</div>
                                     <div>
-                                        <div className="font-display font-bold">{activity.name}</div>
-                                        <div className="text-sm text-dark-600 font-mono">{activity.type}</div>
+                                        <div className="font-black text-lg uppercase tracking-tight">{activity.name}</div>
+                                        <div className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-none mt-1">{activity.type}</div>
                                     </div>
                                 </div>
-                                <div className="score-badge bg-primary-400">
+                                <div className="w-14 h-14 border-4 border-black bg-black text-white flex items-center justify-center font-black text-xl">
                                     {activity.score}
                                 </div>
                             </div>
                         ))}
+                    </div>
+                </div>
+
+                {/* Team / Secondary Info */}
+                <div className="space-y-8">
+                    {profile?.role === 'sales_manager' && (
+                        <div className="bg-black text-white border-4 border-black p-8 shadow-[8px_8px_0px_0px_rgba(249,115,22,1)]">
+                            <h3 className="font-black uppercase text-sm mb-4 flex items-center gap-2">
+                                <Users className="w-5 h-5 text-orange-400" />
+                                Elite Squad Status
+                            </h3>
+                            <div className="space-y-6">
+                                <div>
+                                    <div className="flex justify-between text-[10px] font-black uppercase mb-1">
+                                        <span>Target Performance</span>
+                                        <span>84%</span>
+                                    </div>
+                                    <div className="h-4 w-full border-2 border-white bg-gray-800">
+                                        <div className="h-full bg-orange-500 w-[84%] border-r-2 border-white" />
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-3 border-2 border-gray-700 bg-gray-900">
+                                        <p className="text-[10px] text-gray-500 font-black uppercase">Active</p>
+                                        <p className="text-xl font-black">8</p>
+                                    </div>
+                                    <div className="p-3 border-2 border-gray-700 bg-gray-900">
+                                        <p className="text-[10px] text-gray-500 font-black uppercase">Standby</p>
+                                        <p className="text-xl font-black">4</p>
+                                    </div>
+                                </div>
+                                <button className="w-full h-12 border-2 border-white bg-white text-black font-black uppercase text-xs tracking-widest hover:bg-orange-500 hover:text-white transition-all">
+                                    Manage Roster
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="bg-white border-8 border-black p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+                        <h3 className="font-black uppercase text-sm mb-2 flex items-center gap-2">
+                            <Award className="w-5 h-5 text-blue-500" />
+                            Next Promotion
+                        </h3>
+                        <p className="text-xs font-bold text-gray-600 leading-relaxed mb-4">
+                            You're 24,000 EXP away from becoming a "Cultural Sensei". Complete 3 highly formal German negotiations to accelerate progress.
+                        </p>
+                        <div className="h-6 w-full border-4 border-black bg-gray-100">
+                            <div className="h-full bg-blue-500 w-[65%] border-r-4 border-black" />
+                        </div>
                     </div>
                 </div>
             </div>

@@ -17,7 +17,7 @@ interface CulturalProfile {
 }
 
 export async function generateCulturalProfile(languageCode: string): Promise<CulturalProfile> {
-    const model = genai.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genai.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `Generate a comprehensive cultural business profile for sales professionals targeting ${languageCode} language markets.
 
@@ -75,7 +75,7 @@ export async function analyzeCallTranscript(
     languageCode: string,
     culturalProfile: CulturalProfile
 ): Promise<any> {
-    const model = genai.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
+    const model = genai.getGenerativeModel({ model: 'gemini-1.5-flash' });
 
     const prompt = `Analyze this sales call transcript for a ${languageCode} market with the following cultural context:
 

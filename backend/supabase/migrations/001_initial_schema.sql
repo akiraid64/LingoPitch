@@ -138,9 +138,10 @@ CREATE POLICY "Users can update their own profile"
   ON user_profiles FOR UPDATE
   USING (auth.uid()::text = user_id OR auth.role() = 'service_role');
 
-CREATE POLICY "Users can create their own profile"
-  ON user_profiles FOR INSERT
-  WITH CHECK (auth.uid()::text = user_id OR auth.role() = 'service_role');
+CREATE POLICY "Allow profile creation during signup" ON user_profiles FOR
+INSERT
+WITH
+    CHECK (true);
 
 -- Users can view/create their own analytics events
 CREATE POLICY "Users can view their own analytics"

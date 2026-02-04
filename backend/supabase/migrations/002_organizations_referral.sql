@@ -55,10 +55,16 @@ ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Organizations are viewable by everyone" ON organizations FOR
 SELECT USING (true);
 
+-- Anyone can create an organization (needed during signup flow before session is fully established)
+CREATE POLICY "Allow organization creation during signup" ON organizations FOR
+INSERT
+WITH
+    CHECK (true);
+
 -- Only owner can update their organization
 CREATE POLICY "Owners can update their organization"
   ON organizations FOR UPDATE
   USING (auth.uid()::text = owner_id OR auth.role() = 'service_role');
 
--- Service role can insert (for signup flow)
+-- Service role can manage everything
 CREATE POLICY "Service role can manage organizations" ON organizations FOR ALL USING (auth.role () = 'service_role');
