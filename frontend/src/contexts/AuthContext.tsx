@@ -374,9 +374,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const joinOrganization = async (referralCode: string) => {
-    if (!user) throw new Error('Must be logged in to join an organization');
+    console.log('\n========================================');
+    console.log('🎫 JOIN ORGANIZATION STARTED');
+    console.log('========================================');
+    console.log('Referral Code:', referralCode);
+    console.log('User ID:', user?.id);
+    console.log('Timestamp:', new Date().toISOString());
+    console.log('========================================\n');
+
+    if (!user) {
+      console.error('❌ No user logged in!');
+      throw new Error('Must be logged in to join an organization');
+    }
 
     // Validate referral code and get organization
+    console.log('🔍 Step 1: Looking up organization with referral code...');
     const { data: orgData, error: orgError } = await supabase
       .from('organizations')
       .select('id, name')
@@ -384,19 +396,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .single();
 
     if (orgError || !orgData) {
+      console.error('❌ Organization lookup failed:', orgError);
       throw new Error('Invalid referral code');
     }
 
+    console.log('✅ Organization found:', orgData.name, '(ID:', orgData.id, ')');
+
     // Update user profile with organization (new schema)
+    console.log('\n🔄 Step 2: Updating profile...');
+    console.log('Setting org_id:', orgData.id);
+    console.log('Setting role: rep (mapped from member for DB compatibility)');
+
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
         org_id: orgData.id,
-        role: 'member'
+        role: 'rep'  // FIXED: Database only accepts 'admin', 'manager', 'rep'
       })
       .eq('id', user.id);
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('❌ Profile update failed:', updateError);
+      console.error('Error code:', updateError.code);
+      console.error('Error message:', updateError.message);
+      console.error('Error details:', updateError.details);
+      throw updateError;
+    }
+
+    console.log('✅ Profile updated successfully!');
+    console.log('\n🎉 JOIN ORGANIZATION COMPLETED');
+    console.log('========================================\n');
 
     // Refresh profile to show new org
     await fetchProfile(user.id);
