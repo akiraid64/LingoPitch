@@ -84,21 +84,6 @@ export const UI_STRINGS = {
         viewPlaybook: 'View Playbook',
     },
 
-    // ===== Arena (Training) =====
-    arena: {
-        title: 'Training Arena',
-        subtitle: 'AI-Powered Sales Roleplay • Cultural Intelligence',
-        selectLanguage: 'Select Target Language',
-        culturalBriefing: 'Cultural Briefing',
-        startSession: 'Start Session',
-        endSession: 'End Session',
-        communicationStyle: 'Communication Style',
-        formalityLevel: 'Formality Level',
-        keyPhrases: 'Power Phrases',
-        taboos: 'Cultural Taboos',
-        greetingProtocol: 'Greeting Protocol',
-    },
-
     // ===== Call Analysis =====
     analyze: {
         title: 'Call Analysis',
@@ -199,6 +184,25 @@ export const UI_STRINGS = {
         uploaded: 'Successfully uploaded',
         deleted: 'Successfully deleted',
         updated: 'Successfully updated',
+    },
+
+    // ===== Arena / Voice Roleplay =====
+    arena: {
+        title: 'Training Arena',
+        subtitle: 'Practice real-world sales conversations with AI',
+        current_language: 'Training Language',
+        start_practice: 'Start Practice',
+        connecting: 'Connecting...',
+        listening: 'Listening',
+        muted: 'Microphone Muted',
+        mute: 'Mute Microphone',
+        unmute: 'Unmute Microphone',
+        end_session: 'End Session',
+        powered_by: 'Powered by',
+        culturally_aware: 'Culturally Aware',
+        real_time: 'Real-time Voice',
+        gemini_powered: 'Gemini-Powered',
+        how_it_works: 'How It Works',
     },
 };
 

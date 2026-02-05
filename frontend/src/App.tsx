@@ -22,6 +22,7 @@ import PlaybooksPage from '@/pages/PlaybooksPage';
 import TeamAnalyticsPage from '@/pages/TeamAnalyticsPage';
 import CallDetailPage from '@/pages/CallDetailPage';
 import { RoleplayPage } from '@/pages/RoleplayPage';
+import { ElevenLabsTest } from '@/pages/ElevenLabsTest';
 
 function App() {
     const { loadAvailableLanguages } = useLanguageStore();
@@ -79,6 +80,16 @@ function App() {
                             <ProtectedRoute>
                                 <AppLayout>
                                     <RoleplayPage />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/elevenlabs-test"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <ElevenLabsTest />
                                 </AppLayout>
                             </ProtectedRoute>
                         }
