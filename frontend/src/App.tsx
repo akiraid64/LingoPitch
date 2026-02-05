@@ -21,6 +21,7 @@ import MyProgressPage from '@/pages/MyProgressPage';
 import PlaybooksPage from '@/pages/PlaybooksPage';
 import TeamAnalyticsPage from '@/pages/TeamAnalyticsPage';
 import CallDetailPage from '@/pages/CallDetailPage';
+import { RoleplayPage } from '@/pages/RoleplayPage';
 
 function App() {
     const { loadAvailableLanguages } = useLanguageStore();
@@ -68,6 +69,16 @@ function App() {
                             <ProtectedRoute>
                                 <AppLayout>
                                     <DashboardPage />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/roleplay"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <RoleplayPage />
                                 </AppLayout>
                             </ProtectedRoute>
                         }

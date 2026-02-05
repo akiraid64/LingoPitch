@@ -11,6 +11,7 @@ import profilesRoutes from './routes/profiles.js';
 import chatRoutes from './routes/chat.js';
 import playbooksRoutes from './routes/playbooks.js';
 import translationRoutes from './routes/translation.js';
+import roleplayRoutes from './routes/roleplay.js';
 
 config();
 
@@ -60,6 +61,7 @@ app.use('/api/profiles', profilesRoutes);     // User profiles
 app.use('/api/chat', chatRoutes);             // Advisor Chat
 app.use('/api/playbooks', playbooksRoutes);   // Sales Playbooks
 app.use('/api/translation', translationRoutes); // Real-time Translation (Lingo.dev)
+app.use('/api/roleplay', roleplayRoutes);     // ElevenLabs Roleplay (Gemini-powered)
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {
