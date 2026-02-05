@@ -8,6 +8,7 @@ import callsRoutes from './routes/calls.js';
 import voiceRoutes from './routes/voice.js';
 import analyticsRoutes from './routes/analytics.js';
 import profilesRoutes from './routes/profiles.js';
+import chatRoutes from './routes/chat.js';
 
 config();
 
@@ -54,6 +55,7 @@ app.use('/api/calls', callsRoutes);           // Call analysis
 app.use('/api/voice', voiceRoutes);           // Voice roleplay
 app.use('/api/analytics', analyticsRoutes);   // Analytics
 app.use('/api/profiles', profilesRoutes);     // User profiles
+app.use('/api/chat', chatRoutes);             // Advisor Chat
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {

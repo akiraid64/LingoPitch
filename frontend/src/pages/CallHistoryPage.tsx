@@ -41,7 +41,7 @@ export default function CallHistoryPage() {
                 created_at,
                 duration_seconds,
                 status,
-                call_scores!inner (
+                call_scores (
                     overall_score
                 )
             `)

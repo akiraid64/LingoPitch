@@ -1,12 +1,90 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, Award, Target, Copy, Building2, ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export function DashboardPage() {
     const { profile } = useAuth();
-    console.log('Current Dashboard Profile:', profile);
+    const [stats, setStats] = useState({
+        avgScore: 0,
+        totalCalls: 0,
+        culturalIq: 0
+    });
+    const [recentCalls, setRecentCalls] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
     const [copied, setCopied] = useState(false);
+
+    useEffect(() => {
+        if (profile?.id) {
+            fetchDashboardData();
+        }
+    }, [profile?.id]);
+
+    const fetchDashboardData = async () => {
+        console.log('📊 DASHBOARD: Fetching data for user:', profile?.id);
+        if (!profile?.id) {
+            console.warn('⚠️ DASHBOARD: No profile ID found, aborting fetch.');
+            setLoading(false);
+            return;
+        }
+
+        try {
+            // Fetch recent calls with scores
+            const { data: calls, error } = await supabase
+                .from('calls')
+                .select(`
+                    id,
+                    title,
+                    created_at,
+                    transcript,
+                    call_scores (
+                        overall_score,
+                        raw_response
+                    )
+                `)
+                .eq('user_id', profile?.id)
+                .order('created_at', { ascending: false })
+                .limit(5);
+
+            if (error) {
+                console.error('❌ DASHBOARD: Error fetching calls:', error);
+                throw error;
+            }
+
+            console.log('✅ DASHBOARD: Fetched calls:', calls);
+
+            // Calculate stats from ALL calls (separate query for valid stats if needed, 
+            // but for now let's use the recent ones or a separate aggregate query)
+            // For a better aggregate, let's fetch a light version of all calls
+            const { data: allCalls } = await supabase
+                .from('calls')
+                .select('call_scores(overall_score)')
+                .eq('user_id', profile?.id);
+
+            let totalScore = 0;
+            let count = 0;
+            allCalls?.forEach((c: any) => {
+                const s = c.call_scores?.[0]?.overall_score || c.call_scores?.overall_score;
+                if (s) {
+                    totalScore += s;
+                    count++;
+                }
+            });
+
+            setStats({
+                avgScore: count > 0 ? Math.round(totalScore / count) : 0,
+                totalCalls: allCalls?.length || 0,
+                culturalIq: 0 // Placeholder until we have a real metric for this
+            });
+
+            setRecentCalls(calls || []);
+        } catch (err) {
+            console.error('Error fetching dashboard data:', err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const copyReferral = () => {
         const code = profile?.organizations?.referral_code;
@@ -16,6 +94,16 @@ export function DashboardPage() {
             setTimeout(() => setCopied(false), 2000);
         }
     };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center">
+                    <div className="w-16 h-16 border-8 border-black border-t-blue-500 rounded-full animate-spin mx-auto mb-4"></div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-7xl mx-auto space-y-12 pb-20">
@@ -82,9 +170,9 @@ export function DashboardPage() {
             {/* Stats Grid */}
             <div className="grid md:grid-cols-3 gap-8">
                 {[
-                    { icon: TrendingUp, label: 'Avg Score', value: profile?.average_score || '0', color: 'orange' },
-                    { icon: Award, label: 'Cultural IQ', value: profile?.cultural_iq || '0', color: 'green' },
-                    { icon: Target, label: 'Missions', value: profile?.practice_count || '0', color: 'blue' },
+                    { icon: TrendingUp, label: 'Avg Score', value: stats.avgScore, color: 'orange' },
+                    { icon: Award, label: 'Cultural IQ', value: 'N/A', color: 'green' },
+                    { icon: Target, label: 'Missions', value: stats.totalCalls, color: 'blue' },
                 ].map((stat, i) => (
                     <motion.div
                         key={stat.label}
@@ -118,24 +206,33 @@ export function DashboardPage() {
                         <button className="px-3 py-1 bg-black text-white text-[10px] font-black uppercase">View All</button>
                     </div>
                     <div className="p-6 space-y-4">
-                        {[
-                            { lang: '🇯🇵', name: 'Japanese', score: 82, type: 'Practiced cultural greeting nuances' },
-                            { lang: '🇩🇪', name: 'German', score: 91, type: 'Mastered direct business closure' },
-                            { lang: '🇮🇳', name: 'Hindi', score: 76, type: 'Building trust (Giri) roleplay' },
-                        ].map((activity, i) => (
-                            <div key={i} className="flex items-center justify-between p-6 border-4 border-black bg-white hover:bg-gray-50 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5">
-                                <div className="flex items-center gap-6">
-                                    <div className="text-4xl filter grayscale hover:grayscale-0 transition-all cursor-default">{activity.lang}</div>
-                                    <div>
-                                        <div className="font-black text-lg uppercase tracking-tight">{activity.name}</div>
-                                        <div className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-none mt-1">{activity.type}</div>
+                        {recentCalls.length === 0 ? (
+                            <div className="text-center py-8 text-gray-400 font-bold uppercase">No missions executed yet</div>
+                        ) : (
+                            recentCalls.map((call, i) => {
+                                const score = Array.isArray(call.call_scores)
+                                    ? call.call_scores[0]?.overall_score
+                                    : call.call_scores?.overall_score;
+                                const langCode = call.transcript?.language_code || '??';
+
+                                return (
+                                    <div key={i} className="flex items-center justify-between p-6 border-4 border-black bg-white hover:bg-gray-50 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5">
+                                        <div className="flex items-center gap-6">
+                                            <div className="text-2xl font-black uppercase text-gray-300 w-12">{langCode}</div>
+                                            <div>
+                                                <div className="font-black text-lg uppercase tracking-tight">{call.title}</div>
+                                                <div className="text-xs text-gray-500 font-bold uppercase tracking-widest leading-none mt-1">
+                                                    {new Date(call.created_at).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="w-14 h-14 border-4 border-black bg-black text-white flex items-center justify-center font-black text-xl">
+                                            {score || '-'}
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="w-14 h-14 border-4 border-black bg-black text-white flex items-center justify-center font-black text-xl">
-                                    {activity.score}
-                                </div>
-                            </div>
-                        ))}
+                                )
+                            })
+                        )}
                     </div>
                 </div>
 

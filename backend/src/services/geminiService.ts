@@ -1,8 +1,15 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenerativeAI, SchemaType } from '@google/generative-ai';
 
-const genai = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
+// Initialize Gemini
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+    console.error('FATAL: GEMINI_API_KEY environment variable is not set');
+}
+const genai = new GoogleGenerativeAI(apiKey || 'dummy');
 
-interface CulturalProfile {
+// --- Types ---
+
+export interface CulturalProfile {
     language_code: string;
     language_name: string;
     communication_style: string;
@@ -16,8 +23,58 @@ interface CulturalProfile {
     business_etiquette: string[];
 }
 
+export interface ParameterScores {
+    scoreNeedsDiscovery: number;
+    scoreValueProposition: number;
+    scoreDecisionProcess: number;
+    scoreStakeholderId: number;
+    scoreInsightDelivery: number;
+    scoreObjectionHandling: number;
+    scoreActiveListening: number;
+    scoreCompetition: number;
+    scoreNextSteps: number;
+    scoreCallControl: number;
+}
+
+export interface CulturalScores {
+    scoreCulturalAppropriateness: number;
+    scoreLanguageFormality: number;
+    scoreRelationshipSensitivity: number;
+    scoreProtocolAdherence: number;
+}
+
+export interface AnalysisResult extends ParameterScores, CulturalScores {
+    score: number; // Weighted overall score
+    summary: string;
+    executiveSummary: string;
+    communicationAnalysis: string;
+    sentiment: 'Positive' | 'Neutral' | 'Negative' | 'Mixed';
+    strengths: string[];
+    weaknesses: string[];
+    coachingTips: string[];
+    keyTakeaways: string[];
+    objectionHandling: string;
+    closingTechnique: string;
+}
+
+// 10 Scoring Parameters Weights (Sales Agent Standard)
+const PARAMETER_WEIGHTS = {
+    scoreNeedsDiscovery: 0.15,
+    scoreValueProposition: 0.12,
+    scoreDecisionProcess: 0.10,
+    scoreStakeholderId: 0.12,
+    scoreInsightDelivery: 0.08,
+    scoreObjectionHandling: 0.12,
+    scoreActiveListening: 0.08,
+    scoreCompetition: 0.08,
+    scoreNextSteps: 0.10,
+    scoreCallControl: 0.05,
+} as const;
+
+// --- Functions ---
+
 export async function generateCulturalProfile(languageCode: string): Promise<CulturalProfile> {
-    const model = genai.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genai.getGenerativeModel({ model: 'gemini-2.5-flash' }); // Updated to 2.5
 
     const prompt = `Generate a comprehensive cultural business profile for sales professionals targeting ${languageCode} language markets.
 
@@ -39,33 +96,28 @@ Provide detailed information in the following JSON format:
 Focus on practical, actionable information that will help sales professionals succeed in this market. Be specific and culturally accurate.`;
 
     try {
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }]
+        });
         const response = result.response.text();
-
-        // Extract JSON from response (handle markdown code blocks)
         const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/) || response.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('Failed to extract JSON from Gemini response');
-        }
-
-        const profileData = JSON.parse(jsonMatch[1] || jsonMatch[0]);
-        return profileData;
+        if (!jsonMatch) throw new Error('Failed to extract JSON from Gemini response');
+        return JSON.parse(jsonMatch[1] || jsonMatch[0]);
     } catch (error) {
         console.error('Error generating cultural profile:', error);
-
-        // Return a basic fallback profile
+        // Fallback
         return {
             language_code: languageCode,
             language_name: languageCode.toUpperCase(),
-            communication_style: 'Please configure cultural profile for this language.',
+            communication_style: 'Profile generation failed.',
             formality_level: 5,
-            relationship_building: 'Cultural profile generation failed. Please try again.',
+            relationship_building: 'N/A',
             decision_making: 'N/A',
             negotiation_approach: 'N/A',
-            taboos: ['Profile generation failed'],
-            power_phrases: ['Please regenerate profile'],
+            taboos: [],
+            power_phrases: [],
             greetings_protocol: 'N/A',
-            business_etiquette: ['Please configure manually']
+            business_etiquette: []
         };
     }
 }
@@ -74,52 +126,131 @@ export async function analyzeCallTranscript(
     transcript: string,
     languageCode: string,
     culturalProfile: CulturalProfile
-): Promise<any> {
-    const model = genai.getGenerativeModel({ model: 'gemini-1.5-flash' });
+): Promise<AnalysisResult> {
+    // Use the robust model requested
+    const model = genai.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        generationConfig: { responseMimeType: "application/json" } // Force JSON
+    });
 
-    const prompt = `Analyze this sales call transcript for a ${languageCode} market with the following cultural context:
+    const systemInstruction = `You are an expert AI Sales Coach and Cultural Analyst for LingoPitch.
+    
+    Your task is to analyze sales calls using proven methodologies (MEDDPICC, SPIN) AND Cultural Intelligence for the ${culturalProfile.language_name} market.
 
-Cultural Profile:
-- Communication Style: ${culturalProfile.communication_style}
-- Formality Level: ${culturalProfile.formality_level}/10
-- Relationship Building: ${culturalProfile.relationship_building}
-- Key Taboos: ${culturalProfile.taboos.join(', ')}
+    CONTEXT - CULTURAL PROFILE:
+    - Communication Style: ${culturalProfile.communication_style}
+    - Formality Level: ${culturalProfile.formality_level}/10
+    - Relationship Building: ${culturalProfile.relationship_building}
+    - Key Taboos: ${culturalProfile.taboos.join(', ')}
 
-Transcript:
-${transcript}
+    SCORING CRITERIA (0-100):
+    
+    1. NEEDS DISCOVERY (15%): Effectiveness in uncovering needs. 
+    2. VALUE PROPOSITION (12%): Quantifiable benefits tied to needs.
+    3. DECISION PROCESS (10%): Understanding timeline and buying steps.
+    4. STAKEHOLDER ID (12%): Identifying decision makers/budget holders.
+    5. INSIGHT DELIVERY (8%): Challenging assumptions, delivering unique value.
+    6. OBJECTION HANDLING (12%): Clarifying and resolving concerns.
+    7. ACTIVE LISTENING (8%): Talk-time balance, paraphrasing.
+    8. COMPETITION (8%): Differentiation awareness.
+    9. NEXT STEPS (10%): Clear, committed next steps.
+    10. CALL CONTROL (5%): Agenda setting and time management.
 
-Provide a comprehensive analysis in JSON format with:
-1. Standard sales scores (1-10 for each):
-   - Rapport building
-   - Needs discovery
-   - Value proposition
-   - Objection handling
-   - Closing technique
-   - Overall communication
+    CULTURAL INTELLIGENCE (Separate Scores 0-100):
+    1. Cultural Appropriateness: Adherence to cultural norms.
+    2. Language Formality: Matching the expected formality level (${culturalProfile.formality_level}).
+    3. Relationship Sensitivity: Building trust according to cultural expectations.
+    4. Protocol Adherence: Following greetings and etiquette conventions.
 
-2. Cultural intelligence scores (1-10 for each):
-   - Cultural appropriateness
-   - Language formality
-   - Relationship sensitivity
-   - Protocol adherence
+    OUTPUT:
+    Provide a JSON object containing all scores and detailed qualitative analysis.`;
 
-3. Detailed feedback with specific examples from the transcript
-4. Actionable improvement suggestions
-
-Return only valid JSON.`;
+    const prompt = `Analyze the following transcript:
+    
+    ${transcript}
+    
+    Return the analysis in the specified JSON format.`;
 
     try {
-        const result = await model.generateContent(prompt);
-        const response = result.response.text();
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            systemInstruction: { role: 'system', parts: [{ text: systemInstruction }] },
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: {
+                    type: SchemaType.OBJECT,
+                    properties: {
+                        scoreNeedsDiscovery: { type: SchemaType.INTEGER },
+                        scoreValueProposition: { type: SchemaType.INTEGER },
+                        scoreDecisionProcess: { type: SchemaType.INTEGER },
+                        scoreStakeholderId: { type: SchemaType.INTEGER },
+                        scoreInsightDelivery: { type: SchemaType.INTEGER },
+                        scoreObjectionHandling: { type: SchemaType.INTEGER },
+                        scoreActiveListening: { type: SchemaType.INTEGER },
+                        scoreCompetition: { type: SchemaType.INTEGER },
+                        scoreNextSteps: { type: SchemaType.INTEGER },
+                        scoreCallControl: { type: SchemaType.INTEGER },
 
-        const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/) || response.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) {
-            throw new Error('Failed to extract analysis JSON');
+                        // Cultural Scores
+                        scoreCulturalAppropriateness: { type: SchemaType.INTEGER },
+                        scoreLanguageFormality: { type: SchemaType.INTEGER },
+                        scoreRelationshipSensitivity: { type: SchemaType.INTEGER },
+                        scoreProtocolAdherence: { type: SchemaType.INTEGER },
+
+                        summary: { type: SchemaType.STRING },
+                        executiveSummary: { type: SchemaType.STRING },
+                        communicationAnalysis: { type: SchemaType.STRING },
+                        sentiment: { type: SchemaType.STRING, enum: ["Positive", "Neutral", "Negative", "Mixed"] },
+                        strengths: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                        weaknesses: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                        coachingTips: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                        keyTakeaways: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING } },
+                        objectionHandling: { type: SchemaType.STRING },
+                        closingTechnique: { type: SchemaType.STRING }
+                    },
+                    required: ["scoreNeedsDiscovery", "scoreValueProposition", "scoreDecisionProcess", "scoreStakeholderId", "scoreInsightDelivery", "scoreObjectionHandling", "scoreActiveListening", "scoreCompetition", "scoreNextSteps", "scoreCallControl", "scoreCulturalAppropriateness", "scoreLanguageFormality", "scoreRelationshipSensitivity", "scoreProtocolAdherence", "summary", "executiveSummary", "coachingTips"]
+                }
+            }
+        });
+
+        const text = result.response.text();
+
+        // Parse the JSON directly (Gemini 2.5/Flash often returns pure JSON with responseMimeType)
+        let aiResult: any;
+        try {
+            aiResult = JSON.parse(text);
+        } catch (e) {
+            // Fallback for markdown code blocks
+            const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+                aiResult = JSON.parse(jsonMatch[1] || jsonMatch[0]);
+            } else {
+                throw new Error("Invalid JSON format");
+            }
         }
 
-        return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+        // Calculate weighted score
+        const weightedScore = Math.round(
+            (aiResult.scoreNeedsDiscovery || 0) * PARAMETER_WEIGHTS.scoreNeedsDiscovery +
+            (aiResult.scoreValueProposition || 0) * PARAMETER_WEIGHTS.scoreValueProposition +
+            (aiResult.scoreDecisionProcess || 0) * PARAMETER_WEIGHTS.scoreDecisionProcess +
+            (aiResult.scoreStakeholderId || 0) * PARAMETER_WEIGHTS.scoreStakeholderId +
+            (aiResult.scoreInsightDelivery || 0) * PARAMETER_WEIGHTS.scoreInsightDelivery +
+            (aiResult.scoreObjectionHandling || 0) * PARAMETER_WEIGHTS.scoreObjectionHandling +
+            (aiResult.scoreActiveListening || 0) * PARAMETER_WEIGHTS.scoreActiveListening +
+            (aiResult.scoreCompetition || 0) * PARAMETER_WEIGHTS.scoreCompetition +
+            (aiResult.scoreNextSteps || 0) * PARAMETER_WEIGHTS.scoreNextSteps +
+            (aiResult.scoreCallControl || 0) * PARAMETER_WEIGHTS.scoreCallControl
+        );
+
+        return {
+            ...aiResult,
+            score: weightedScore
+        };
+
     } catch (error) {
         console.error('Error analyzing transcript:', error);
         throw new Error('Failed to analyze call transcript');
     }
 }
+

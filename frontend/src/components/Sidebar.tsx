@@ -10,7 +10,8 @@ import {
     TrendingUp,
     BookOpen,
     Sparkles,
-    BarChart3
+    BarChart3,
+    Bot
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -25,11 +26,12 @@ export default function Sidebar() {
     ];
 
     const resourcesMenuItems = [
+        { id: 'advisor', label: 'AI Copilot', icon: Bot, path: '/advisor' },
         { id: 'team', label: 'Team', icon: Globe2, path: '/team', managerOnly: true },
         { id: 'call-history', label: 'Call History', icon: Phone, path: '/call-history' },
         { id: 'progress', label: 'My Progress', icon: TrendingUp, path: '/progress' },
-        { id: 'playbooks', label: 'Playbooks', icon: BookOpen, path: '/playbooks' },
-        { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics' },
+        { id: 'playbooks', label: 'Playbooks', icon: BookOpen, path: '/playbooks', managerOnly: true },
+        { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', managerOnly: true },
     ];
 
     const handleLogout = async () => {
