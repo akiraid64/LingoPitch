@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { chatWithTeamData } from '../services/chatService.js';
 import { supabaseAdmin } from '../lib/supabase.js';
+import { translateText } from '../services/translationService.js';
+import { getLanguageByCode } from '../config/languages.js';
 
 const router = Router();
 
@@ -39,20 +41,44 @@ router.use(requireAuth);
 
 router.post('/', async (req: any, res) => {
     try {
-        const { message, conversationHistory } = req.body;
+        const { message, conversationHistory, targetLocale } = req.body;
         const profile = req.profile;
 
         if (!profile.org_id) {
             return res.status(400).json({ success: false, error: 'User has no organization' });
         }
 
-        const result = await chatWithTeamData(
+        let result = await chatWithTeamData(
             profile.org_id,
             profile.id,
             profile.role,
             message,
             conversationHistory
         );
+
+        // If targetLocale is provided and not English, translate the response
+        if (targetLocale && !targetLocale.startsWith('en')) {
+            try {
+                const langConfig = getLanguageByCode(targetLocale);
+                const lingoDotDevCode = langConfig?.lingoDotDevCode || targetLocale.split('-')[0];
+
+                console.log(`🌐 Translating response to ${targetLocale} (${lingoDotDevCode})`);
+
+                const translatedResponse = await translateText(
+                    result.response,
+                    'en', // Source is always English from AI
+                    lingoDotDevCode
+                );
+
+                result = {
+                    ...result,
+                    response: translatedResponse,
+                } as any;
+            } catch (translateError) {
+                console.error('Translation failed, returning original:', translateError);
+                // Continue with original response if translation fails
+            }
+        }
 
         res.json({ success: true, data: result });
     } catch (error: any) {

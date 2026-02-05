@@ -12,11 +12,13 @@ export interface ChatResponse {
 
 /**
  * Send a message to the AI chat
+ * @param targetLocale - Optional locale code to translate response (e.g., 'es-ES', 'fr-FR')
  */
 export async function sendChatMessage(
     accessToken: string,
     message: string,
-    conversationHistory: ChatMessage[] = []
+    conversationHistory: ChatMessage[] = [],
+    targetLocale?: string
 ): Promise<ChatResponse> {
     const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
@@ -27,6 +29,7 @@ export async function sendChatMessage(
         body: JSON.stringify({
             message,
             conversationHistory,
+            targetLocale, // Optional: translate response to this language
         }),
     });
 
@@ -36,7 +39,6 @@ export async function sendChatMessage(
         throw new Error(data.error?.message || 'Chat failed');
     }
 
-    return data.data;
     return data.data;
 }
 

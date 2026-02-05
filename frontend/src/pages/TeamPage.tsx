@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useTranslation } from '../contexts/TranslationContext';
 
 interface TeamMember {
     id: string;
@@ -21,6 +22,7 @@ interface Organization {
 export default function TeamPage() {
     const { profile, user } = useAuth();
     const navigate = useNavigate();
+    const { t } = useTranslation();
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [organization, setOrganization] = useState<Organization | null>(null);
     const [loading, setLoading] = useState(true);
@@ -108,7 +110,7 @@ export default function TeamPage() {
             <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                     <h1 className="text-4xl font-black uppercase tracking-tight mb-2">
-                        Team <span className="text-blue-500">Command</span>
+                        {t('advisor.teamCopilot')} <span className="text-blue-500">Command</span>
                     </h1>
                     <p className="text-gray-600 font-bold uppercase text-xs tracking-widest">
                         {organization?.name || 'Your Organization'}
@@ -120,7 +122,7 @@ export default function TeamPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {[
                     { label: 'Active Agents', value: activeAgents.toString(), color: 'blue' },
-                    { label: 'Total Members', value: totalMembers.toString(), color: 'orange' },
+                    { label: t('teamAnalytics.totalMembers'), value: totalMembers.toString(), color: 'orange' },
                     { label: 'Referral Code', value: organization?.referral_code || 'N/A', color: 'green' },
                 ].map((stat) => (
                     <div key={stat.label} className="p-6 bg-white border-8 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">

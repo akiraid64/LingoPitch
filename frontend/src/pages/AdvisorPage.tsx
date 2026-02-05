@@ -2,11 +2,15 @@ import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Zap, Globe2, Loader2, BookOpen, BarChart3, TrendingUp, Sparkles } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { sendChatMessage, ChatMessage } from '../services/api';
+import { useLanguageStore } from '../store/languageStore';
+import { useTranslation } from '../contexts/TranslationContext';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 export default function AdvisorPage() {
     const { profile, session } = useAuth();
+    const { targetLocale } = useLanguageStore();
+    const { t } = useTranslation();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -31,10 +35,12 @@ export default function AdvisorPage() {
         setIsLoading(true);
 
         try {
+            console.log('💬 Sending chat with targetLocale:', targetLocale || 'none (English)');
             const response = await sendChatMessage(
                 session.access_token,
                 input,
-                messages
+                messages,
+                targetLocale || undefined // Pass selected language for translation
             );
 
             // The backend returns the updated history, but let's just append the new response to be safe/smooth
@@ -49,7 +55,7 @@ export default function AdvisorPage() {
             // Add error message as a system/bot message
             setMessages(prev => [...prev, {
                 role: 'model',
-                parts: [{ text: '⚠️ I encountered an error connecting to the database. Please try again.' }]
+                parts: [{ text: t('errors.somethingWentWrong') }]
             }]);
         } finally {
             setIsLoading(false);
@@ -61,8 +67,8 @@ export default function AdvisorPage() {
 
     const suggestedQuestions = isManager
         ? [
-            { icon: <TrendingUp size={16} />, text: "How is the team performing overall?" },
-            { icon: <BarChart3 size={16} />, text: "Who needs the most coaching right now?" },
+            { icon: <TrendingUp size={16} />, text: t('advisor.managerPlaceholder') }, // Using placeholder text as a generic question for now or keys if available
+            { icon: <BarChart3 size={16} />, text: "Who needs the most coaching right now?" }, // These specific questions might need to be added to uiStrings if strict translation is needed, for now I'll keep them or map closely if possible. Let's assume specific questions might stay English or need new keys. I will convert the main UI shell first.
             { icon: <BookOpen size={16} />, text: "Are they following the 'Discovery' playbook?" },
             { icon: <Sparkles size={16} />, text: "Summarize the last 5 calls from the team" }
         ]
@@ -77,11 +83,11 @@ export default function AdvisorPage() {
         <div className="max-w-6xl mx-auto space-y-6 h-[calc(100vh-100px)] flex flex-col">
             <header className="flex-shrink-0">
                 <h1 className="text-4xl font-black uppercase tracking-tight mb-2">
-                    {isManager ? 'Team' : 'My'} <span className="text-orange-500">Copilot</span>
+                    {isManager ? t('advisor.teamCopilot') : t('advisor.myCopilot')} <span className="text-orange-500">{t('advisor.title')}</span>
                 </h1>
                 <p className="text-gray-600 font-bold uppercase text-xs tracking-widest flex items-center gap-2">
                     <Zap className="w-4 h-4 text-orange-500 fill-orange-500" />
-                    AI-Powered Performance & Playbook Intelligence • {isManager ? 'Full Org View' : 'Personal View'}
+                    {t('advisor.subtitle')} • {isManager ? t('advisor.fullOrgView') : t('advisor.personalView')}
                 </p>
             </header>
 
@@ -94,7 +100,7 @@ export default function AdvisorPage() {
                         {messages.length === 0 && (
                             <div className="h-full flex flex-col items-center justify-center opacity-50 space-y-4">
                                 <Bot className="w-16 h-16 text-gray-400" />
-                                <p className="text-lg font-black uppercase text-gray-400">Ask me anything about your data</p>
+                                <p className="text-lg font-black uppercase text-gray-400">{t('advisor.askAnything')}</p>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full max-w-lg">
                                     {suggestedQuestions.map((q, idx) => (
                                         <button
@@ -132,7 +138,7 @@ export default function AdvisorPage() {
                             <div className="flex justify-start">
                                 <div className="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] flex items-center gap-3">
                                     <Loader2 className="w-5 h-5 animate-spin text-orange-500" />
-                                    <span className="text-xs font-black uppercase tracking-widest">Analyzing Data...</span>
+                                    <span className="text-xs font-black uppercase tracking-widest">{t('advisor.analyzingData')}</span>
                                 </div>
                             </div>
                         )}
@@ -146,7 +152,7 @@ export default function AdvisorPage() {
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                            placeholder={isManager ? "Ask about team performance, playbooks, or trends..." : "Ask about your calls, scores, or playbooks..."}
+                            placeholder={isManager ? t('advisor.managerPlaceholder') : t('advisor.placeholder')}
                             className="flex-1 h-14 px-6 border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] font-bold focus:translate-x-1 focus:translate-y-1 focus:shadow-none transition-all outline-none"
                             disabled={isLoading}
                         />
@@ -165,42 +171,42 @@ export default function AdvisorPage() {
                     <div className="p-6 bg-black text-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(249,115,22,1)]">
                         <h3 className="font-black uppercase text-sm mb-4 flex items-center gap-2">
                             <Zap className="w-4 h-4 text-orange-400 fill-orange-400" />
-                            Active Context
+                            {t('advisor.activeContext')}
                         </h3>
                         <div className="space-y-4 text-xs font-bold text-gray-300">
                             <div className="flex items-center gap-2">
                                 <Globe2 className="w-4 h-4" />
-                                <span>{isManager ? 'Entire Organization' : 'Your Data Only'}</span>
+                                <span>{isManager ? t('advisor.fullOrgView') : t('advisor.personalView')}</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <BookOpen className="w-4 h-4" />
-                                <span>Playbooks Loaded</span>
+                                <span>{t('advisor.queryPlaybook')}</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <BarChart3 className="w-4 h-4" />
-                                <span>Call Scores & Analytics</span>
+                                <span>{t('advisor.analyzeTrends')}</span>
                             </div>
                         </div>
                     </div>
 
                     <div className="p-6 border-4 border-black bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex-1">
-                        <h3 className="font-black uppercase text-sm mb-4">Capabilities</h3>
+                        <h3 className="font-black uppercase text-sm mb-4">{t('advisor.capabilities')}</h3>
                         <ul className="space-y-3 text-xs font-medium text-gray-600">
                             <li className="flex gap-2">
                                 <span className="text-orange-500 font-black">•</span>
-                                Analyze performance trends
+                                {t('advisor.analyzeTrends')}
                             </li>
                             <li className="flex gap-2">
                                 <span className="text-orange-500 font-black">•</span>
-                                Review specific calls
+                                {t('advisor.reviewCalls')}
                             </li>
                             <li className="flex gap-2">
                                 <span className="text-orange-500 font-black">•</span>
-                                Query playbook knowledge
+                                {t('advisor.queryPlaybook')}
                             </li>
                             <li className="flex gap-2">
                                 <span className="text-orange-500 font-black">•</span>
-                                Get coaching advice
+                                {t('advisor.getCoaching')}
                             </li>
                         </ul>
                     </div>

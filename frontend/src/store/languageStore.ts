@@ -30,6 +30,9 @@ interface LanguageState {
     currentLanguage: string;
     currentLanguageInfo: LanguageInfo | null;
 
+    // Translation target locale (for Lingo.dev)
+    targetLocale: string | null;
+
     // Cultural profile
     culturalProfile: CulturalProfile | null;
     isLoadingProfile: boolean;
@@ -39,6 +42,7 @@ interface LanguageState {
 
     // Actions
     setLanguage: (langCode: string) => Promise<void>;
+    setTargetLocale: (localeCode: string | null) => void;
     fetchCulturalProfile: (langCode: string) => Promise<void>;
     loadAvailableLanguages: () => Promise<void>;
 }
@@ -49,11 +53,12 @@ export const useLanguageStore = create<LanguageState>()(
             currentLanguage: 'en',
             currentLanguageInfo: {
                 code: 'en',
-                name: 'English',
+                name: 'English (Original)',
                 nativeName: 'English',
                 flag: '🇺🇸',
                 region: 'United States',
             },
+            targetLocale: null, // No translation by default (English)
             culturalProfile: null,
             isLoadingProfile: false,
             availableLanguages: [],
@@ -90,6 +95,11 @@ export const useLanguageStore = create<LanguageState>()(
                 }
             },
 
+            setTargetLocale: (localeCode: string | null) => {
+                console.log('🔄 languageStore: Setting targetLocale to:', localeCode);
+                set({ targetLocale: localeCode });
+            },
+
             fetchCulturalProfile: async (langCode: string) => {
                 try {
                     const response = await fetch(`/api/cultural/profile?lang=${langCode}`);
@@ -113,10 +123,11 @@ export const useLanguageStore = create<LanguageState>()(
             },
         }),
         {
-            name: 'lingo-language-storage',
+            name: 'lingo-language-storage-v2',
             partialize: (state) => ({
                 currentLanguage: state.currentLanguage,
                 currentLanguageInfo: state.currentLanguageInfo,
+                targetLocale: state.targetLocale, // Persist selection
             }),
         }
     )

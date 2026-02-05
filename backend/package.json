@@ -17,6 +17,7 @@
         "dotenv": "^16.4.5",
         "express": "^4.21.0",
         "helmet": "^8.0.0",
+        "lingo.dev": "^0.131.0",
         "livekit-server-sdk": "^2.15.0",
         "multer": "^2.0.2",
         "pdf-parse": "^1.1.1"

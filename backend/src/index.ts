@@ -10,6 +10,7 @@ import analyticsRoutes from './routes/analytics.js';
 import profilesRoutes from './routes/profiles.js';
 import chatRoutes from './routes/chat.js';
 import playbooksRoutes from './routes/playbooks.js';
+import translationRoutes from './routes/translation.js';
 
 config();
 
@@ -58,6 +59,7 @@ app.use('/api/analytics', analyticsRoutes);   // Analytics
 app.use('/api/profiles', profilesRoutes);     // User profiles
 app.use('/api/chat', chatRoutes);             // Advisor Chat
 app.use('/api/playbooks', playbooksRoutes);   // Sales Playbooks
+app.use('/api/translation', translationRoutes); // Real-time Translation (Lingo.dev)
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {
@@ -69,7 +71,7 @@ app.get('/api/health', (_req, res) => {
             supabase: !!process.env.SUPABASE_URL,
             gemini: !!process.env.GEMINI_API_KEY,
             livekit: !!process.env.LIVEKIT_API_KEY,
-            lingoDev: !!process.env.LINGO_DEV_API_KEY,
+            lingoDev: !!process.env.LINGODOTDEV_API_KEY,
         }
     });
 });

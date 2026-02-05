@@ -1,5 +1,6 @@
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from '../contexts/TranslationContext';
 import {
     Swords,
     Settings,
@@ -18,20 +19,21 @@ export default function Sidebar() {
     const { profile, signOut } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const { t } = useTranslation();
 
     const callLabMenuItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: BarChart3, path: '/dashboard' },
-        { id: 'analyze', label: 'New Analysis', icon: Sparkles, path: '/analyze' },
-        { id: 'arena', label: 'Roleplay', icon: Swords, path: '/arena', badge: 'WIP' },
+        { id: 'dashboard', labelKey: 'nav.dashboard', icon: BarChart3, path: '/dashboard' },
+        { id: 'analyze', labelKey: 'nav.analyze', icon: Sparkles, path: '/analyze' },
+        { id: 'arena', labelKey: 'nav.arena', icon: Swords, path: '/arena', badge: 'WIP' },
     ];
 
     const resourcesMenuItems = [
-        { id: 'advisor', label: 'AI Copilot', icon: Bot, path: '/advisor' },
-        { id: 'team', label: 'Team', icon: Globe2, path: '/team', managerOnly: true },
-        { id: 'call-history', label: 'Call History', icon: Phone, path: '/call-history' },
-        { id: 'progress', label: 'My Progress', icon: TrendingUp, path: '/progress' },
-        { id: 'playbooks', label: 'Playbooks', icon: BookOpen, path: '/playbooks', managerOnly: true },
-        { id: 'analytics', label: 'Analytics', icon: BarChart3, path: '/analytics', managerOnly: true },
+        { id: 'advisor', labelKey: 'nav.advisor', icon: Bot, path: '/advisor' },
+        { id: 'team', labelKey: 'nav.members', icon: Globe2, path: '/team', managerOnly: true },
+        { id: 'call-history', labelKey: 'members.callHistory', icon: Phone, path: '/call-history' },
+        { id: 'progress', labelKey: 'nav.myPerformance', icon: TrendingUp, path: '/progress' },
+        { id: 'playbooks', labelKey: 'nav.playbooks', icon: BookOpen, path: '/playbooks', managerOnly: true },
+        { id: 'analytics', labelKey: 'nav.teamAnalytics', icon: BarChart3, path: '/analytics', managerOnly: true },
     ];
 
     const handleLogout = async () => {
@@ -70,7 +72,7 @@ export default function Sidebar() {
                                 }`}
                         >
                             <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'group-hover:text-black'}`} />
-                            {item.label}
+                            {t(item.labelKey)}
                             {item.badge && (
                                 <span className="ml-auto px-2 py-0.5 text-[8px] font-black bg-blue-400 text-white border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
                                     {item.badge}
@@ -99,7 +101,7 @@ export default function Sidebar() {
                                     }`}
                             >
                                 <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'group-hover:text-black'}`} />
-                                {item.label}
+                                {t(item.labelKey)}
                             </Link>
                         );
                     })}
@@ -111,7 +113,7 @@ export default function Sidebar() {
                         className={`flex items-center gap-3 px-4 py-3 border-4 border-black bg-white text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-0.5 hover:translate-y-0.5 hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all font-black text-sm uppercase tracking-wide`}
                     >
                         <Settings className="w-5 h-5" />
-                        Settings
+                        {t('actions.settings')}
                     </Link>
                 </div>
             </nav>
@@ -140,7 +142,7 @@ export default function Sidebar() {
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 border-4 border-black bg-red-500 text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all font-black text-xs uppercase tracking-widest"
                 >
                     <LogOut className="w-4 h-4" />
-                    Sign Out
+                    {t('nav.signOut')}
                 </button>
 
                 <div className="mt-4 flex justify-between items-center px-2 opacity-40">

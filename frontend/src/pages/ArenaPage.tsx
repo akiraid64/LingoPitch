@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { Mic, Play, Square, Info } from 'lucide-react';
 import { useLanguageStore } from '@/store/languageStore';
 import { CulturalBriefing } from '@/components/CulturalBriefing';
+import { useTranslation } from '@/contexts/TranslationContext';
 
 export function ArenaPage() {
     const { currentLanguageInfo, culturalProfile } = useLanguageStore();
+    const { t } = useTranslation();
     const [showBriefing, setShowBriefing] = useState(true);
     const [isInCall, setIsInCall] = useState(false);
 
@@ -19,11 +21,10 @@ export function ArenaPage() {
                     className="mb-12"
                 >
                     <h1 className="font-display font-bold text-5xl md:text-6xl uppercase mb-4">
-                        Practice Arena
+                        {t('arena.title')}
                     </h1>
                     <p className="text-xl text-dark-700 font-medium">
-                        Roleplay with AI prospects from {currentLanguageInfo?.name || 'any region'}.
-                        Master cultural nuances before real calls.
+                        {t('arena.subtitle')} - {currentLanguageInfo?.name || 'Any Region'}
                     </p>
                 </motion.div>
 
@@ -34,7 +35,7 @@ export function ArenaPage() {
                             <div>
                                 <div className="flex items-center justify-between mb-6">
                                     <h2 className="font-display font-bold text-2xl uppercase">
-                                        Pre-Call Briefing
+                                        {t('arena.culturalBriefing')}
                                     </h2>
                                     <button
                                         onClick={() => setShowBriefing(false)}
@@ -90,7 +91,7 @@ export function ArenaPage() {
                                         className="w-full btn-brutal flex items-center justify-center gap-3"
                                     >
                                         <Play className="w-6 h-6" />
-                                        <span>Start Roleplay</span>
+                                        <span>{t('arena.startSession')}</span>
                                     </button>
                                 ) : (
                                     <div className="space-y-4">
@@ -132,7 +133,7 @@ export function ArenaPage() {
                                  transition-all duration-200 flex items-center justify-center gap-3"
                                         >
                                             <Square className="w-6 h-6" />
-                                            <span>End Call</span>
+                                            <span>{t('arena.endSession')}</span>
                                         </button>
                                     </div>
                                 )}

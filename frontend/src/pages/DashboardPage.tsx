@@ -1,11 +1,13 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, Award, Target, Copy, Building2, ShieldCheck, Users } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTranslation } from '@/contexts/TranslationContext';
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 
 export function DashboardPage() {
     const { profile } = useAuth();
+    const { t } = useTranslation();
     const [stats, setStats] = useState({
         avgScore: 0,
         totalCalls: 0,
@@ -115,7 +117,7 @@ export function DashboardPage() {
             >
                 <div>
                     <h1 className="font-black text-5xl md:text-6xl uppercase tracking-tight mb-2">
-                        Dashboard
+                        {t('nav.dashboard')}
                     </h1>
                     <div className="flex items-center gap-2">
                         <div className={`px-3 py-1 border-2 border-black font-black text-[10px] uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] ${profile?.role === 'sales_manager' || profile?.role === 'manager' ? 'bg-orange-400 text-black' : 'bg-blue-400 text-white'
@@ -203,7 +205,7 @@ export function DashboardPage() {
                             <TrendingUp className="w-6 h-6" />
                             Recent Field Missions
                         </h2>
-                        <button className="px-3 py-1 bg-black text-white text-[10px] font-black uppercase">View All</button>
+                        <button className="px-3 py-1 bg-black text-white text-[10px] font-black uppercase">{t('dashboard.viewAll')}</button>
                     </div>
                     <div className="p-6 space-y-4">
                         {recentCalls.length === 0 ? (
