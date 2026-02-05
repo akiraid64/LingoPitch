@@ -31,7 +31,7 @@ export function MemberDetailPage() {
 
     useEffect(() => {
         const fetchMemberData = async () => {
-            if (!profile?.organization_id || !memberId) {
+            if (!profile?.org_id || !memberId) {
                 setError('Invalid access');
                 setLoading(false);
                 return;
@@ -40,10 +40,10 @@ export function MemberDetailPage() {
             try {
                 // Fetch member profile
                 const { data: memberData, error: memberError } = await supabase
-                    .from('user_profiles')
-                    .select('user_id, full_name, email, role, created_at')
-                    .eq('user_id', memberId)
-                    .eq('organization_id', profile.organization_id)
+                    .from('profiles')
+                    .select('id, full_name, email, role, created_at')
+                    .eq('id', memberId)
+                    .eq('org_id', profile.org_id)
                     .single();
 
                 if (memberError) throw memberError;
@@ -53,19 +53,30 @@ export function MemberDetailPage() {
                     return;
                 }
 
-                setMember(memberData);
+                // Map 'id' to 'user_id' for local state compatibility if needed, 
+                // but better to just use the object as is or map it here.
+                setMember({
+                    ...memberData,
+                    user_id: memberData.id
+                });
 
                 // Fetch member's calls
                 const { data: callsData, error: callsError } = await supabase
                     .from('calls')
-                    .select('id, created_at, duration, transcript')
+                    .select('id, created_at, duration_seconds, transcript')
                     .eq('user_id', memberId)
-                    .eq('organization_id', profile.organization_id)
                     .order('created_at', { ascending: false })
                     .limit(20);
 
                 if (callsError) throw callsError;
-                setCalls(callsData || []);
+
+                // Map duration_seconds to duration
+                const mappedCalls = (callsData || []).map(c => ({
+                    ...c,
+                    duration: c.duration_seconds
+                }));
+
+                setCalls(mappedCalls);
 
             } catch (err: any) {
                 console.error('Error fetching member data:', err);
@@ -76,7 +87,7 @@ export function MemberDetailPage() {
         };
 
         fetchMemberData();
-    }, [memberId, profile?.organization_id]);
+    }, [memberId, profile?.org_id]);
 
     if (loading) {
         return (
@@ -231,9 +242,12 @@ export function MemberDetailPage() {
                                             </div>
                                         </div>
                                         <div className="text-right">
-                                            <div className="px-3 py-1 bg-gray-200 border-2 border-black font-black text-[10px] uppercase">
+                                            <button
+                                                onClick={() => navigate(`/calls/${call.id}`)}
+                                                className="px-3 py-1 bg-black text-white border-2 border-black font-black text-[10px] uppercase hover:bg-gray-800 transition-colors"
+                                            >
                                                 View
-                                            </div>
+                                            </button>
                                         </div>
                                     </div>
                                 </motion.div>

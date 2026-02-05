@@ -62,9 +62,25 @@ router.post('/', async (req, res) => {
             }
         }
 
+        // Fetch Playbook Context for Org
+        let playbookContext = '';
+        if (req.body.org_id) {
+            console.log('📚 Fetching playbook context for org:', req.body.org_id);
+            const { data: chunks } = await (supabaseAdmin as any)
+                .from('playbook_chunks')
+                .select('text_content')
+                .eq('org_id', req.body.org_id)
+                .limit(10); // Limit to top 10 chunks for context window safety
+
+            if (chunks && chunks.length > 0) {
+                playbookContext = chunks.map((c: any) => c.text_content).join('\n\n');
+                console.log(`✅ Loaded ${chunks.length} playbook chunks for context.`);
+            }
+        }
+
         // Analyze the call
         console.log('Analyzing transcript with profile:', culturalProfile.language_name);
-        const analysis = await analyzeCallTranscript(transcript, language_code, culturalProfile);
+        const analysis = await analyzeCallTranscript(transcript, language_code, culturalProfile, playbookContext);
         console.log('Analysis complete. Score:', analysis.score);
 
         // 1. Save Call Metadata

@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { BookOpen, Upload, FileText, Trash2, Search } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
+import { getPlaybooks, uploadPlaybook } from '../services/api';
 
 interface Playbook {
     playbook_name: string;
@@ -11,7 +12,7 @@ interface Playbook {
 }
 
 export default function PlaybooksPage() {
-    const { profile } = useAuth();
+    const { profile, session } = useAuth();
     const [playbooks, setPlaybooks] = useState<Playbook[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
@@ -22,44 +23,36 @@ export default function PlaybooksPage() {
     }, [profile]);
 
     const fetchPlaybooks = async () => {
-        if (!profile?.org_id) return;
+        if (!profile?.org_id || !session?.access_token) return;
 
         setLoading(true);
-        const { data, error } = await supabase
-            .from('playbook_chunks')
-            .select('playbook_name, created_at')
-            .eq('org_id', profile.org_id);
-
-        if (error) {
+        try {
+            const data = await getPlaybooks(session.access_token, profile.org_id);
+            setPlaybooks(data);
+        } catch (error) {
             console.error('Error fetching playbooks:', error);
-        } else {
-            // Group by playbook name
-            const grouped = data?.reduce((acc, chunk) => {
-                if (!acc[chunk.playbook_name]) {
-                    acc[chunk.playbook_name] = {
-                        playbook_name: chunk.playbook_name,
-                        chunk_count: 0,
-                        created_at: chunk.created_at,
-                    };
-                }
-                acc[chunk.playbook_name].chunk_count++;
-                return acc;
-            }, {} as Record<string, Playbook>);
-
-            setPlaybooks(Object.values(grouped || {}));
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file || !profile?.org_id) return;
+        if (!file || !profile?.org_id || !session?.access_token) return;
 
         setUploading(true);
-        // TODO: Implement PDF processing + embedding generation
-        // This will require backend endpoint
-        alert('PDF upload and embedding generation coming soon! This requires backend implementation.');
-        setUploading(false);
+        try {
+            await uploadPlaybook(session.access_token, profile.org_id, file);
+            alert('Playbook uploaded and indexed successfully!');
+            fetchPlaybooks();
+        } catch (error: any) {
+            console.error('Upload failed:', error);
+            alert(`Upload failed: ${error.message}`);
+        } finally {
+            setUploading(false);
+            // Reset input
+            e.target.value = '';
+        }
     };
 
     const handleDelete = async (playbookName: string) => {

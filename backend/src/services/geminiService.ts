@@ -122,10 +122,24 @@ Focus on practical, actionable information that will help sales professionals su
     }
 }
 
+
+export async function generateEmbedding(text: string): Promise<number[]> {
+    const model = genai.getGenerativeModel({ model: "text-embedding-004" });
+
+    try {
+        const result = await model.embedContent(text);
+        return result.embedding.values;
+    } catch (error) {
+        console.error('Error generating embedding:', error);
+        throw new Error('Failed to generate embedding');
+    }
+}
+
 export async function analyzeCallTranscript(
     transcript: string,
     languageCode: string,
-    culturalProfile: CulturalProfile
+    culturalProfile: CulturalProfile,
+    playbookContext?: string
 ): Promise<AnalysisResult> {
     // Use the robust model requested
     const model = genai.getGenerativeModel({
@@ -136,6 +150,13 @@ export async function analyzeCallTranscript(
     const systemInstruction = `You are an expert AI Sales Coach and Cultural Analyst for LingoPitch.
     
     Your task is to analyze sales calls using proven methodologies (MEDDPICC, SPIN) AND Cultural Intelligence for the ${culturalProfile.language_name} market.
+
+    ${playbookContext ? `
+    IMPORTANT: The following Sales Playbook knowledge should be used as the primary coaching methodology for this analysis:
+    ---
+    ${playbookContext}
+    ---
+    ` : ''}
 
     CONTEXT - CULTURAL PROFILE:
     - Communication Style: ${culturalProfile.communication_style}

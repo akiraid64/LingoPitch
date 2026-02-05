@@ -20,6 +20,7 @@ import CallHistoryPage from '@/pages/CallHistoryPage';
 import MyProgressPage from '@/pages/MyProgressPage';
 import PlaybooksPage from '@/pages/PlaybooksPage';
 import TeamAnalyticsPage from '@/pages/TeamAnalyticsPage';
+import CallDetailPage from '@/pages/CallDetailPage';
 
 function App() {
     const { loadAvailableLanguages } = useLanguageStore();
@@ -107,6 +108,16 @@ function App() {
                             <ProtectedRoute>
                                 <AppLayout>
                                     <MemberDetailPage />
+                                </AppLayout>
+                            </ProtectedRoute>
+                        }
+                    />
+                    <Route
+                        path="/calls/:callId"
+                        element={
+                            <ProtectedRoute>
+                                <AppLayout>
+                                    <CallDetailPage />
                                 </AppLayout>
                             </ProtectedRoute>
                         }

@@ -70,6 +70,8 @@ export default function TeamAnalyticsPage() {
         const teamData: TeamMember[] = [];
         const allScores: any[] = [];
 
+        console.log('🔍 Step 2: Fetching call data for team members...');
+
         for (const member of members || []) {
             const { data: calls, error: callsError } = await supabase
                 .from('calls')
@@ -93,6 +95,7 @@ export default function TeamAnalyticsPage() {
                 .gte('created_at', cutoffDate.toISOString());
 
             if (!callsError && calls) {
+                // console.log(`   - ${member.full_name}: ${calls.length} calls found`);
                 const scoresWithData = calls.map(c => c.call_scores).flat();
                 allScores.push(...scoresWithData);
 
@@ -105,8 +108,11 @@ export default function TeamAnalyticsPage() {
                     avg_score: Math.round(avgScore),
                     total_calls: calls.length,
                 });
+            } else if (callsError) {
+                console.error(`   ❌ Error fetching calls for ${member.full_name}:`, callsError);
             }
         }
+        console.log('✅ Team data aggregation complete.');
 
         setTeamMembers(teamData);
 

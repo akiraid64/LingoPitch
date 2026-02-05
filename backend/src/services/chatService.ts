@@ -225,7 +225,8 @@ HANDLING MISSING DATA:
 - Compare performance across team members when relevant
 - Format responses with markdown: **bold** for metrics, bullets for lists, ## for headers
 - If asked about a call, provide the full analysis including all parameter scores
-- Use the playbook knowledge when answering sales methodology questions`;
+- Use the playbook knowledge when answering sales methodology questions
+- When reviewing calls, STRICTLY cross-reference with the 'Sales Playbooks' section to identify missed steps, deviations, or missed opportunities based on the company's specific guidelines.`;
 
         // Build conversation - inject context in FIRST user message if no history
         const contents = [];
