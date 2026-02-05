@@ -24,7 +24,12 @@ export function DashboardPage() {
     }, [profile?.id]);
 
     const fetchDashboardData = async () => {
-        console.log('📊 DASHBOARD: Fetching data for user:', profile?.id);
+        console.log('📊 DASHBOARD DEBUG:', {
+            profileId: profile?.id,
+            role: profile?.role,
+            org: profile?.organizations
+        });
+
         if (!profile?.id) {
             console.warn('⚠️ DASHBOARD: No profile ID found, aborting fetch.');
             setLoading(false);

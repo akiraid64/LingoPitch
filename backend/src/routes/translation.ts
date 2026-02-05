@@ -242,4 +242,41 @@ router.post('/html', async (req: Request, res: Response) => {
     }
 });
 
+/**
+ * POST /api/translation/ui-strings
+ * Translate an object of UI strings
+ * Body: { strings: Record<string, string>, targetLocale: string }
+ */
+router.post('/ui-strings', async (req: Request, res: Response) => {
+    try {
+        const { strings, targetLocale } = req.body;
+
+        if (!strings || !targetLocale) {
+            return res.status(400).json({
+                success: false,
+                error: { message: 'strings object and targetLocale are required' }
+            });
+        }
+
+        const targetLang = getLanguageByCode(targetLocale);
+        const lingoDotDevTarget = targetLang?.lingoDotDevCode || targetLocale;
+
+        // Note: lingo.dev SDK has localizeObject
+        // We'll use the service to handle the engine details
+        const { translateObject } = await import('../services/translationService.js');
+        const translated = await translateObject(strings, 'en', lingoDotDevTarget);
+
+        res.json({
+            success: true,
+            translated
+        });
+    } catch (error: any) {
+        console.error('UI strings translation error:', error);
+        res.status(500).json({
+            success: false,
+            error: { message: error.message || 'UI strings translation failed' }
+        });
+    }
+});
+
 export default router;

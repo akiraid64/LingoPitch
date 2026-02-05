@@ -2,50 +2,70 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabaseAdmin } from '../lib/supabase.js';
 import type { LanguageVariant } from '../config/languages.js';
 
-const PROMPT_GENERATOR_TEMPLATE = `You are an expert in international sales training and cultural intelligence.
+const PROMPT_GENERATOR_TEMPLATE = `You are a world-class actor and roleplay expert.
+You are playing the role of a potential customer, NOT the salesperson.
+Your goal is to provide a realistic sales roleplay scenario for the user (who is the salesperson).
 
-Generate a detailed ElevenLabs Conversational AI system prompt for a sales roleplay customer with these specs:
+**YOUR ROLE:**
+- Name: [Invent a local name based on region]
+- Region: {{nativeName}} ({{accent}} accent)
+- Language: {{language}}
+- Context: You are a cold lead. You did NOT ask for this call.
 
-LANGUAGE: {{language}} ({{nativeName}})
-ACCENT/REGION: {{accent}} ({{code}})
-PLAYBOOK CONTEXT:
+**YOUR PROBLEM (THE REASON FOR THE SALES OPPORTUNITY):**
+- Based on the product description below, invent a specific, realistic PAIN POINT or BUSINESS PROBLEM that this person is facing.
+- You are frustrated or stressed by this problem, but you do not yet know the user's product is the solution.
+- You should mention symptoms of this problem naturally during the conversation.
+
+**CRITICAL INSTRUCTIONS:**
+1. **START:** You must WAIT for the user to speak first. If there is silence, say "Hello? Who is this?" with suspicion.
+2. **ANTI-ASSISTANT:** You are NOT a helpful AI. You are a busy person with a problem.
+   - NEVER ask "How can I help you?".
+   - NEVER say "Is there anything else?".
+   - If the user asks "What can I do for you?", reply: "You called me! Who are you?".
+3. **TONE:** Skeptical, busy, slightly annoyed initially.
+4. **KNOWLEDGE:** You know NOTHING about the user's company unless told.
+5. **CULTURAL AUTHENTICITY:**
+   - Use authentic {{accent}} expressions and sentence structures.
+   - Follow typical {{nativeName}} business etiquette (e.g. directness vs politeness).
+   - If the region is high-context, be indirect. If low-context, be direct.
+
+**PRODUCT CONTEXT (What the user is selling):**
+{{product_description}}
+
+**SCENARIO:**
 {{playbook_content}}
 
-Your generated prompt MUST include:
-1. **Identity**: "You are a potential customer in [Region]..."
-2. **Language Directive**: "You speak [Language] with a [Accent] accent. Use authentic regional expressions and pronunciation."
-3. **Cultural Behaviors**: 
-   - Communication style (direct/indirect)
-   - Business etiquette norms
-   - Appropriate greetings
-   - Decision-making approach
-   - Negotiation style
-4. **Cultural Taboos**: 3-5 specific things to avoid in this culture
-5. **Personality**: Based on typical [Region] customer archetype
-6. **Product Knowledge**: Align difficulty with playbook
-
-OUTPUT FORMAT: Return ONLY the system prompt text (no markdown, no explanations, no meta-commentary).`;
+**OUTPUT DIRECTIVE:**
+Generate a system prompt for an ElevenLabs/Cartesia agent that embodies this specific persona.
+The prompt should instruct the agent to BE this person completely.
+Return ONLY the prompt text.`;
 
 interface GeneratePromptParams {
     languageCode: string;
     langInfo: LanguageVariant;
     playbook: string;
+    productDescription?: string;
 }
 
-export async function generateRoleplayPrompt({ languageCode, langInfo, playbook }: GeneratePromptParams): Promise<string> {
+export async function generateRoleplayPrompt({ languageCode, langInfo, playbook, productDescription }: GeneratePromptParams): Promise<string> {
     console.log(`[ROLEPLAY] 🌍 Generating prompt for: ${languageCode}`);
     console.log(`[ROLEPLAY] 📍 Region: ${langInfo.accent}`);
 
-    // Check cache first
+    // Check cache first (todo: add productDescription dependency to cache key)
     const { data: cached, error: cacheError } = await supabaseAdmin
         .from('roleplay_prompts')
         .select('*')
         .eq('language_code', languageCode)
-        .single() as any; // Type assertion until DB types regenerate
+        .single() as any;
 
-    if (cached && !cacheError) {
+    // For now, bypass cache if we have custom product description to ensure freshness
+    // This allows the user to update their settings and immediately see effects.
+    if (cached && !cacheError && !productDescription) {
         console.log(`[ROLEPLAY] ✅ Using cached prompt`);
         return cached.generated_prompt;
+    } else if (cached && !cacheError && productDescription) {
+        console.log(`[ROLEPLAY] ⚠️ Bypassing cache to include custom product context.`);
     }
 
     console.log(`[ROLEPLAY] 📖 Playbook loaded (${playbook.length} chars)`);
@@ -60,6 +80,8 @@ export async function generateRoleplayPrompt({ languageCode, langInfo, playbook 
         .replace('{{nativeName}}', langInfo.nativeName)
         .replace('{{accent}}', langInfo.accent)
         .replace('{{code}}', langInfo.code)
+        .replace('{{company_name}}', 'Lingo.dev') // Could be dynamic
+        .replace('{{product_description}}', productDescription || 'A generic B2B software product')
         .replace('{{playbook_content}}', playbook);
 
     const result = await model.generateContent(prompt);
@@ -71,16 +93,17 @@ export async function generateRoleplayPrompt({ languageCode, langInfo, playbook 
 
 
     // Save to cache (upsert to handle updates)
+    // Save to cache (upsert to handle updates)
     const { error: upsertError } = await (supabaseAdmin
-        .from('roleplay_prompts')
+        .from('roleplay_prompts') as any)
         .upsert({
             language_code: languageCode,
             generated_prompt: generatedPrompt,
-            playbook_version: 'v1.0', // TODO: Make dynamic
+            playbook_version: 'v1.1', // Incremented to invalidate cache for new persona
             updated_at: new Date().toISOString()
         }, {
             onConflict: 'language_code'
-        }) as any); // Type assertion until DB types regenerate
+        });
 
     if (upsertError) {
         console.error(`[ROLEPLAY] ⚠️ Failed to cache prompt:`, upsertError);

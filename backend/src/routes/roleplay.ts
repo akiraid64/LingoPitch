@@ -32,7 +32,8 @@ router.post('/generate-prompt', async (req: Request, res: Response) => {
         const prompt = await generateRoleplayPrompt({
             languageCode,
             langInfo,
-            playbook
+            playbook,
+            productDescription: req.body.productDescription // Pass from request
         });
 
         console.log(`[ROLEPLAY API] ✅ Prompt ready (${prompt.length} chars)`);

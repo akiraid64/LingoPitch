@@ -24,6 +24,12 @@ export class CartesiaVoiceClient {
     private streamId: string = '';
     private isStreaming: boolean = false;
     private audioQueue: AudioBufferSourceNode[] = [];
+    private nextStartTime: number = 0;
+
+    // New recording properties
+    private mediaRecorder: MediaRecorder | null = null;
+    private audioChunks: Blob[] = [];
+    private recordingDestination: MediaStreamAudioDestinationNode | null = null;
 
     constructor(
         private onConnected?: () => void,
@@ -44,6 +50,10 @@ export class CartesiaVoiceClient {
         this.ws = new WebSocket(authenticatedUrl);
         this.streamId = `stream_${Date.now()}`;
         this.audioContext = new AudioContext({ sampleRate: 44100 });
+
+        // Create recording destination
+        this.recordingDestination = this.audioContext.createMediaStreamDestination();
+        this.audioChunks = [];
 
         this.ws.onopen = () => {
             console.log('[CARTESIA] ✅ WebSocket connected successfully');
@@ -69,6 +79,8 @@ export class CartesiaVoiceClient {
 
         this.ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
+            // Debug: Log all events to find transcript format
+            // console.log('[CARTESIA] Rx:', data.event); 
 
             switch (data.event) {
                 case 'ack':
@@ -80,7 +92,7 @@ export class CartesiaVoiceClient {
 
                 case 'media_output':
                     // Agent is speaking - play audio
-                    console.log('[CARTESIA] Received audio chunk');
+                    // console.log('[CARTESIA] Received audio chunk');
                     this.playAudio(data.media.payload);
                     break;
 
@@ -91,45 +103,28 @@ export class CartesiaVoiceClient {
                     break;
 
                 case 'dtmf':
-                    console.log('[CARTESIA] DTMF tone:', data.dtmf);
-                    break;
-
                 case 'custom':
-                    console.log('[CARTESIA] Custom event:', data.metadata);
+                case 'transcription':
+                case 'transcript':
+                case 'stt':
+                case 'speech_to_text':
+                case 'llm_output':
+                case 'agent_output':
+                    // Ignoring text events as we are moving to Gemini Audio recording
                     break;
 
                 default:
-                    console.log('[CARTESIA] Unknown event:', data.event);
+                // console.log('[CARTESIA] Unknown event:', data.event);
             }
         };
 
         this.ws.onerror = (error) => {
             console.error('[CARTESIA] ❌ WebSocket error:', error);
-            console.error('[CARTESIA] Error details:', {
-                type: error.type,
-                target: error.target,
-                currentTarget: error.currentTarget
-            });
             this.onError?.('WebSocket connection failed');
         };
 
         this.ws.onclose = (event) => {
-            console.log('[CARTESIA] WebSocket closed:', {
-                code: event.code,
-                reason: event.reason || '(no reason provided)',
-                wasClean: event.wasClean
-            });
-
-            // Common close codes:
-            // 1000 = Normal closure
-            // 1006 = Abnormal closure (no close frame, connection lost)
-            // 1008 = Policy violation
-            // 1011 = Server error
-
-            if (event.code === 1006) {
-                console.error('[CARTESIA] ⚠️ Abnormal closure - server may not be reachable or rejected connection');
-            }
-
+            console.log('[CARTESIA] WebSocket closed:', event.code);
             this.onDisconnected?.();
             this.cleanup();
         };
@@ -157,6 +152,12 @@ export class CartesiaVoiceClient {
             console.log('[CARTESIA] ✅ Microphone access granted');
 
             const source = this.audioContext.createMediaStreamSource(stream);
+
+            // Connect Mic to Recording Destination (so user voice is recorded)
+            if (this.recordingDestination) {
+                source.connect(this.recordingDestination);
+                this.startRecording();
+            }
 
             // Use ScriptProcessorNode for audio processing (deprecated but widely supported)
             // TODO: Consider migrating to AudioWorklet for better performance
@@ -193,7 +194,12 @@ export class CartesiaVoiceClient {
             };
 
             source.connect(processor);
-            processor.connect(this.audioContext.destination);
+            processor.connect(this.audioContext.destination); // Required for script processor to run, but we mute it via 0 gain if needed? 
+            // Actually script processor to destination is usually silent if output buffer is empty.
+            // But we don't want to hear ourselves (echo). 
+            // The script processor doesn't output audio unless we copy input to output buffer.
+            // We are NOT copying, so it's fine.
+
             this.isStreaming = true;
 
             console.log('[CARTESIA] 🎤 Microphone streaming started');
@@ -203,6 +209,46 @@ export class CartesiaVoiceClient {
             this.onError?.('Microphone access denied');
             throw error;
         }
+    }
+
+    /**
+     * Start MediaRecorder on the mixed stream
+     */
+    private startRecording() {
+        if (!this.recordingDestination) return;
+
+        const mixedStream = this.recordingDestination.stream;
+        this.mediaRecorder = new MediaRecorder(mixedStream);
+        this.audioChunks = [];
+
+        this.mediaRecorder.ondataavailable = (event) => {
+            if (event.data && event.data.size > 0) {
+                this.audioChunks.push(event.data);
+            }
+        };
+
+        // Start with 1000ms timeslice to ensure we get chunks periodically
+        this.mediaRecorder.start(1000);
+        console.log('[CARTESIA] ⏺️ Recording started');
+    }
+
+    /**
+     * Stop recording and return Blob
+     */
+    async stopRecording(): Promise<Blob> {
+        return new Promise((resolve) => {
+            if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+                this.mediaRecorder.onstop = () => {
+                    const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                    console.log(`[CARTESIA] ⏺️ Recording stopped. Size: ${blob.size} bytes`);
+                    resolve(blob);
+                };
+                this.mediaRecorder.stop();
+            } else {
+                const blob = new Blob(this.audioChunks, { type: 'audio/webm' });
+                resolve(blob);
+            }
+        });
     }
 
     /**
@@ -225,6 +271,8 @@ export class CartesiaVoiceClient {
         return int16Array;
     }
 
+
+
     /**
      * Play received audio from agent
      */
@@ -240,7 +288,6 @@ export class CartesiaVoiceClient {
             }
 
             // Convert raw PCM16 bytes to Float32
-            // The audio is 16-bit little-endian PCM
             const int16Array = new Int16Array(bytes.buffer);
             const float32Array = new Float32Array(int16Array.length);
 
@@ -263,8 +310,28 @@ export class CartesiaVoiceClient {
             // Create and play audio source
             const source = this.audioContext.createBufferSource();
             source.buffer = audioBuffer;
+
+            // Connect to Speaker (Hear)
             source.connect(this.audioContext.destination);
-            source.start();
+
+            // Connect to Recorder (Capture Agent Voice)
+            if (this.recordingDestination) {
+                source.connect(this.recordingDestination);
+            }
+
+            // Schedule scheduled playback to ensure no gaps
+            // Ensure we don't schedule in the past
+            const currentTime = this.audioContext.currentTime;
+
+            // If nextStartTime is in the past (buffer underrun), reset it to now
+            if (this.nextStartTime < currentTime) {
+                this.nextStartTime = currentTime;
+            }
+
+            source.start(this.nextStartTime);
+
+            // Update next start time for the subsequent chunk
+            this.nextStartTime += audioBuffer.duration;
 
             // Track for cleanup
             this.audioQueue.push(source);
@@ -294,13 +361,23 @@ export class CartesiaVoiceClient {
             }
         });
         this.audioQueue = [];
+
+        // Reset scheduling time using checking the context
+        if (this.audioContext) {
+            this.nextStartTime = this.audioContext.currentTime;
+        } else {
+            this.nextStartTime = 0;
+        }
     }
 
     /**
      * Disconnect and cleanup resources
+     * Returns the session transcript
      */
-    disconnect(): void {
-        console.log('[CARTESIA] Disconnecting...');
+    async disconnectAndGetBlob(): Promise<Blob> {
+        console.log('[CARTESIA] Disconnecting and getting blob...');
+
+        const audioBlob = await this.stopRecording();
 
         this.stopMicrophone();
         this.clearAudio();
@@ -311,6 +388,13 @@ export class CartesiaVoiceClient {
         }
 
         this.cleanup();
+        return audioBlob;
+    }
+
+    // Kept for compatibility but now unused
+    disconnect() {
+        this.disconnectAndGetBlob();
+        // return []; // Transcript removed
     }
 
     /**
@@ -323,6 +407,9 @@ export class CartesiaVoiceClient {
         }
         this.streamId = '';
         this.isStreaming = false;
+        this.mediaRecorder = null;
+        this.audioChunks = [];
+        this.recordingDestination = null;
     }
 
     /**

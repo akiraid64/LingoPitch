@@ -27,26 +27,22 @@ export default function MyProgressPage() {
     const { profile } = useAuth();
     const [calls, setCalls] = useState<CallWithScore[]>([]);
     const [loading, setLoading] = useState(true);
-    const [timePeriod, setTimePeriod] = useState<'7d' | '30d' | '90d'>('30d');
 
     useEffect(() => {
         fetchCalls();
-    }, [profile, timePeriod]);
+    }, [profile]); // Removed timePeriod dependency
 
     const fetchCalls = async () => {
         if (!profile?.id) return;
 
         setLoading(true);
-        const daysAgo = timePeriod === '7d' ? 7 : timePeriod === '30d' ? 30 : 90;
-        const cutoffDate = new Date();
-        cutoffDate.setDate(cutoffDate.getDate() - daysAgo);
 
         const { data, error } = await supabase
             .from('calls')
             .select(`
                 id,
                 created_at,
-                call_scores!inner (
+                call_scores (
                     overall_score,
                     score_needs_discovery,
                     score_value_proposition,
@@ -61,7 +57,6 @@ export default function MyProgressPage() {
                 )
             `)
             .eq('user_id', profile.id)
-            .gte('created_at', cutoffDate.toISOString())
             .order('created_at', { ascending: true });
 
         if (error) {
@@ -89,52 +84,52 @@ export default function MyProgressPage() {
     const totalCalls = calls.length;
 
     // Weekly trend data
-    const weeklyData = calls.slice(-7).map((call, index) => ({
-        day: `Day ${index + 1}`,
-        score: call.call_scores?.overall_score || 0,
+    const weeklyData = calls.slice(-7).map((call) => ({
+        day: new Date(call.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        score: Number(call.call_scores?.overall_score || 0),
     }));
 
     // Skills breakdown (average of all parameters)
     const skillsData = calls.length > 0 ? [
         {
             skill: 'Discovery',
-            score: calls.reduce((sum, c) => sum + (c.call_scores?.score_needs_discovery || 0), 0) / calls.length,
+            score: Number(calls.reduce((sum, c) => sum + Number(c.call_scores?.score_needs_discovery || 0), 0) / calls.length),
         },
         {
             skill: 'Value Prop',
-            score: calls.reduce((sum, c) => sum + (c.call_scores?.score_value_proposition || 0), 0) / calls.length,
+            score: Number(calls.reduce((sum, c) => sum + Number(c.call_scores?.score_value_proposition || 0), 0) / calls.length),
         },
         {
             skill: 'Decision',
-            score: calls.reduce((sum, c) => sum + (c.call_scores?.score_decision_process || 0), 0) / calls.length,
+            score: Number(calls.reduce((sum, c) => sum + Number(c.call_scores?.score_decision_process || 0), 0) / calls.length),
         },
         {
             skill: 'Stakeholder',
-            score: calls.reduce((sum, c) => sum + (c.call_scores?.score_stakeholder_id || 0), 0) / calls.length,
+            score: Number(calls.reduce((sum, c) => sum + Number(c.call_scores?.score_stakeholder_id || 0), 0) / calls.length),
         },
         {
             skill: 'Insights',
-            score: calls.reduce((sum, c) => sum + (c.call_scores?.score_insight_delivery || 0), 0) / calls.length,
+            score: Number(calls.reduce((sum, c) => sum + Number(c.call_scores?.score_insight_delivery || 0), 0) / calls.length),
         },
         {
             skill: 'Objections',
-            score: calls.reduce((sum, c) => sum + (c.call_scores?.score_objection_handling || 0), 0) / calls.length,
+            score: Number(calls.reduce((sum, c) => sum + Number(c.call_scores?.score_objection_handling || 0), 0) / calls.length),
         },
         {
             skill: 'Listening',
-            score: calls.reduce((sum, c) => sum + (c.call_scores?.score_active_listening || 0), 0) / calls.length,
+            score: Number(calls.reduce((sum, c) => sum + Number(c.call_scores?.score_active_listening || 0), 0) / calls.length),
         },
         {
             skill: 'Competition',
-            score: calls.reduce((sum, c) => sum + (c.call_scores?.score_competition || 0), 0) / calls.length,
+            score: Number(calls.reduce((sum, c) => sum + Number(c.call_scores?.score_competition || 0), 0) / calls.length),
         },
         {
             skill: 'Next Steps',
-            score: calls.reduce((sum, c) => sum + (c.call_scores?.score_next_steps || 0), 0) / calls.length,
+            score: Number(calls.reduce((sum, c) => sum + Number(c.call_scores?.score_next_steps || 0), 0) / calls.length),
         },
         {
             skill: 'Control',
-            score: calls.reduce((sum, c) => sum + (c.call_scores?.score_call_control || 0), 0) / calls.length,
+            score: Number(calls.reduce((sum, c) => sum + Number(c.call_scores?.score_call_control || 0), 0) / calls.length),
         },
     ] : [];
 
@@ -166,21 +161,7 @@ export default function MyProgressPage() {
                     </p>
                 </div>
 
-                {/* Time Period Selector */}
-                <div className="flex gap-2 border-4 border-black bg-white shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-                    {(['7d', '30d', '90d'] as const).map((period) => (
-                        <button
-                            key={period}
-                            onClick={() => setTimePeriod(period)}
-                            className={`px-6 py-3 font-black text-sm uppercase transition-all ${timePeriod === period
-                                ? 'bg-black text-white'
-                                : 'bg-white text-black hover:bg-gray-100'
-                                }`}
-                        >
-                            {period === '7d' ? '7 Days' : period === '30d' ? '30 Days' : '90 Days'}
-                        </button>
-                    ))}
-                </div>
+                {/* Time Period Selector Removed */}
             </motion.div>
 
             {/* Stats Cards */}
@@ -249,6 +230,7 @@ export default function MyProgressPage() {
                                 stroke="#000"
                                 strokeWidth={3}
                                 style={{ fontFamily: 'inherit', fontWeight: 900, fontSize: 12 }}
+                                domain={[0, 100]}
                             />
                             <Tooltip
                                 contentStyle={{
@@ -264,6 +246,7 @@ export default function MyProgressPage() {
                                 stroke="#000"
                                 strokeWidth={4}
                                 fill="#60a5fa"
+                                connectNulls
                             />
                         </AreaChart>
                     </ResponsiveContainer>
@@ -286,16 +269,16 @@ export default function MyProgressPage() {
                 {skillsData.length > 0 ? (
                     <div className="flex justify-center">
                         <ResponsiveContainer width="100%" height={400}>
-                            <RadarChart data={skillsData}>
+                            <RadarChart cx="50%" cy="50%" outerRadius="65%" data={skillsData}>
                                 <PolarGrid stroke="#000" strokeWidth={2} />
                                 <PolarAngleAxis
                                     dataKey="skill"
                                     stroke="#000"
                                     strokeWidth={2}
-                                    style={{ fontFamily: 'inherit', fontWeight: 900, fontSize: 11 }}
+                                    style={{ fontFamily: 'inherit', fontWeight: 900, fontSize: 10 }}
                                 />
                                 <PolarRadiusAxis
-                                    angle={90}
+                                    angle={30}
                                     domain={[0, 100]}
                                     stroke="#000"
                                     strokeWidth={2}
@@ -319,3 +302,4 @@ export default function MyProgressPage() {
         </div>
     );
 }
+

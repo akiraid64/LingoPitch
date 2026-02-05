@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useLanguageStore } from '@/store/languageStore';
 import { Loader2, Mic, MicOff, Sparkles, Clock } from 'lucide-react';
 import { useTranslation } from '@/contexts/TranslationContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { CartesiaVoiceClient } from '@/services/cartesiaClient';
+import { supabase } from '@/lib/supabase';
 import { useEffect } from 'react';
 
 // Internal Timer Component
@@ -41,6 +43,7 @@ const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001
 export function ArenaPage() {
     const { currentLanguageInfo, targetLocale } = useLanguageStore();
     const { t } = useTranslation();
+    const { profile } = useAuth();
     const [client] = useState(() => new CartesiaVoiceClient(
         () => console.log('[ARENA] ✅ Connected'),
         () => console.log('[ARENA] Disconnected'),
@@ -49,24 +52,37 @@ export function ArenaPage() {
     const [isConnecting, setIsConnecting] = useState(false);
     const [isConnected, setIsConnected] = useState(false);
     const [isMicActive, setIsMicActive] = useState(false);
+    const agentIdRef = useRef<string | null>(null); // Ref to avoid stale closure in callbacks
     const [error, setError] = useState<string | null>(null);
 
     const startSession = async () => {
         console.log(`[ARENA] 🎙️ Starting voice session for: ${targetLocale}`);
         setIsConnecting(true);
         setError(null);
+        agentIdRef.current = null;
 
         try {
-            // Step 1: Request session from TypeScript backend
             // (which fetches Gemini prompt and proxies to Python agent)
             console.log('[ARENA] 🔄 Requesting session from backend...');
+
+            // Get product description from profile organization
+            // Note: We use 'any' casting because TS definitions for profile might not be fully updated
+            const productDesc = (currentLanguageInfo as any)?.product_description ||
+                (profile?.organizations?.product_description);
+
+            console.log('[ARENA] 📦 Product Context:', productDesc ? `${productDesc.substring(0, 50)}...` : '(None)');
+
+
+
             const response = await fetch(`${API_URL}/api/voice-agent/start-session`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     language_code: targetLocale,
-                    user_id: 'user123', // TODO: Get from auth
-                    playbook: 'B2B SaaS Sales'
+                    // Use current user ID or a valid 0000... fallback for unauthenticated testing to avoid DB UUID errors
+                    user_id: profile?.id || '00000000-0000-0000-0000-000000000000',
+                    playbook: 'B2B SaaS Sales',
+                    product_description: productDesc
                 })
             });
 
@@ -77,6 +93,7 @@ export function ArenaPage() {
 
             const sessionData = await response.json();
             console.log('[ARENA] ✅ Session created:', sessionData.agent_id);
+            agentIdRef.current = sessionData.agent_id;
             console.log('[ARENA] 📝 System prompt length:', sessionData.system_prompt.length);
 
             // Connect to Cartesia voice agent
@@ -88,6 +105,8 @@ export function ArenaPage() {
             console.log('[ARENA] 🎤 Starting microphone...');
             await client.startMicrophone();
             setIsMicActive(true);
+            setIsConnected(true); // Ensure connected state is set
+            setSessionStartTime(Date.now());
 
             console.log('[ARENA] 🚀 Voice roleplay started!');
 
@@ -100,11 +119,110 @@ export function ArenaPage() {
         }
     };
 
-    const endSession = () => {
+    const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
+
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const [transcript, setTranscript] = useState<string | null>(null);
+    const [isAnalyzing, setIsAnalyzing] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState<{ overall_score: number; summary: string } | null>(null);
+
+    const pollForAnalysis = async (sessionId: string) => {
+        setIsAnalyzing(true);
+        setAnalysisResult(null);
+
+        let attempts = 0;
+        const maxAttempts = 30; // 30 * 2s = 60s timeout
+
+        const interval = setInterval(async () => {
+            attempts++;
+            if (attempts > maxAttempts) {
+                clearInterval(interval);
+                setIsAnalyzing(false);
+                return;
+            }
+
+            const { data } = await supabase
+                .from('voice_sessions')
+                .select('analysis')
+                .eq('id', sessionId)
+                .single();
+
+            if (data?.analysis) {
+                clearInterval(interval);
+                setAnalysisResult({
+                    overall_score: data.analysis.score,
+                    summary: data.analysis.summary
+                });
+                setIsAnalyzing(false);
+            }
+        }, 2000);
+    };
+
+    const endSession = async () => {
         console.log('[ARENA] Ending session...');
-        client.disconnect();
+        if (client) {
+            setIsProcessing(true); // Start loading state
+            setTranscript(null);
+            setAnalysisResult(null);
+            setIsAnalyzing(false);
+
+            // Get the recorded audio blob instead of a text transcript
+            const audioBlob = await client.disconnectAndGetBlob();
+
+            const endTime = Date.now();
+            const duration = sessionStartTime ? Math.round((endTime - sessionStartTime) / 1000) : 0;
+
+            console.log(`[ARENA] Session ended. Audio size: ${audioBlob.size} bytes`);
+
+            // Save session audio to backend for Gemini/Gemini
+            try {
+                const formData = new FormData();
+                const userId = profile?.id || '00000000-0000-0000-0000-000000000000';
+
+                formData.append('audio', audioBlob, 'session_recording.webm');
+                formData.append('user_id', userId);
+                formData.append('agent_id', agentIdRef.current || '');
+                formData.append('duration_seconds', duration.toString());
+                formData.append('started_at', sessionStartTime ? new Date(sessionStartTime).toISOString() : new Date().toISOString());
+                formData.append('ended_at', new Date().toISOString());
+
+                const productDesc = (currentLanguageInfo as any)?.product_description || (profile?.organizations?.product_description) || '';
+                formData.append('product_description', productDesc);
+                formData.append('language_code', targetLocale || 'en'); // Required for analysis
+
+                console.log('[ARENA] 📤 Uploading session audio...', { size: audioBlob.size, duration });
+
+                const resp = await fetch(`${API_URL}/api/voice-agent/end-session`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (resp.ok) {
+                    console.log('[ARENA] ✅ Audio uploaded and transcript generated successfully');
+                    const respData = await resp.json();
+                    console.log('[ARENA] Server response:', respData);
+
+                    setTranscript(respData.transcript);
+
+                    // Start polling for analysis
+                    if (respData.session_id) {
+                        pollForAnalysis(respData.session_id);
+                    }
+                } else {
+                    const errText = await resp.text();
+                    console.error(`[ARENA] ❌ Failed to save session. Status: ${resp.status}`, errText);
+                    setError(`Failed to save session: ${errText}`);
+                }
+            } catch (e) {
+                console.error('[ARENA] Failed to save session:', e);
+                setError('Failed to save session. Please try again.');
+            }
+        }
         setIsConnected(false);
         setIsMicActive(false);
+        setSessionStartTime(null);
+        setIsProcessing(false); // End loading state
     };
 
     const toggleMic = () => {
@@ -118,196 +236,183 @@ export function ArenaPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-indigo-950">
-            <div className="container mx-auto px-4 py-12">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="max-w-4xl mx-auto"
-                >
-                    {/* Header */}
-                    <div className="text-center mb-12">
-                        <motion.div
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            transition={{ type: 'spring', stiffness: 200 }}
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full mb-6"
-                        >
-                            <Sparkles className="w-5 h-5" />
-                            <span className="font-semibold">AI-Powered Voice Roleplay</span>
-                        </motion.div>
+        <div className="h-screen bg-dark-50 relative overflow-hidden font-body flex flex-col">
+            {/* Background Grid Pattern */}
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#0000000a_1px,transparent_1px),linear-gradient(to_bottom,#0000000a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none" />
 
-                        <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-                            {t('arena.title')}
-                        </h1>
-                        <p className="text-xl text-gray-600 dark:text-gray-300">
-                            {t('arena.subtitle')}
-                        </p>
+            {/* Compact Header Bar */}
+            <div className="relative z-10 border-b-4 border-black bg-white px-6 py-3 flex items-center justify-between shadow-brutal-sm shrink-0">
+                <div className="flex items-center gap-4">
+                    <div className="bg-accent-200 border-2 border-black px-3 py-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
+                        <Sparkles className="w-4 h-4 text-black inline-block mr-2" />
+                        <span className="font-display font-bold uppercase text-xs tracking-wider">Arena</span>
                     </div>
+                    <h1 className="font-display font-bold text-2xl uppercase tracking-tight hidden md:block">
+                        {t('arena.title')}
+                    </h1>
+                </div>
 
-                    {/* Language Info */}
-                    <motion.div
-                        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl mb-8"
-                        whileHover={{ scale: 1.02 }}
-                    >
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">
-                                    {t('arena.current_language')}
-                                </p>
-                                <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                                    {currentLanguageInfo?.nativeName}
-                                </h3>
-                                <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                                    {currentLanguageInfo?.region} • {currentLanguageInfo?.code}
-                                </p>
-                            </div>
-                            <div className="text-6xl">
-                                {currentLanguageInfo?.flag}
-                            </div>
+                {/* Language Info - Compact */}
+                <div className="flex items-center gap-6">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">{currentLanguageInfo?.flag}</span>
+                        <div className="leading-none">
+                            <div className="font-display font-bold text-sm uppercase">{currentLanguageInfo?.nativeName}</div>
+                            <div className="font-mono text-[10px] text-gray-500">{currentLanguageInfo?.code}</div>
                         </div>
-                    </motion.div>
+                    </div>
+                    {/* Timer */}
+                    {isConnected && (
+                        <div className="font-mono font-bold text-xl flex items-center gap-2 bg-dark-100 px-3 py-1 border-2 border-black">
+                            <Clock className="w-4 h-4" />
+                            <Timer isRunning={isConnected} />
+                        </div>
+                    )}
+                </div>
+            </div>
 
-                    {/* Voice Session Control */}
-                    <motion.div
-                        className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm rounded-2xl p-8 shadow-xl"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.2 }}
-                    >
-                        {/* Error Message */}
+            {/* Main Stage */}
+            <div className="flex-1 relative z-10 p-4 flex items-center justify-center min-h-0">
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="w-full max-w-5xl h-full flex gap-4"
+                >
+                    {/* Interaction Panel */}
+                    <div className="flex-1 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 md:p-8 flex flex-col items-center justify-center relative overflow-hidden">
+
+                        {/* Error Message Overlay */}
                         {error && (
-                            <motion.div
-                                initial={{ opacity: 0, y: -10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-                            >
-                                <p className="text-red-800 dark:text-red-200 text-sm">
-                                    ❌ {error}
-                                </p>
-                            </motion.div>
-                        )}
-
-                        {/* Not Connected State */}
-                        {!isConnected && (
-                            <div className="text-center">
-                                <motion.button
-                                    onClick={startSession}
-                                    disabled={isConnecting}
-                                    className="group relative inline-flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-full font-semibold text-lg shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                                    whileHover={!isConnecting ? { scale: 1.05 } : {}}
-                                    whileTap={!isConnecting ? { scale: 0.95 } : {}}
-                                >
-                                    {isConnecting ? (
-                                        <>
-                                            <Loader2 className="w-6 h-6 animate-spin" />
-                                            <span>{t('arena.connecting')}</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Mic className="w-6 h-6" />
-                                            <span>{t('arena.start_practice')}</span>
-                                        </>
-                                    )}
-                                </motion.button>
-
-                                <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
-                                    {t('arena.powered_by')} <strong>Cartesia AI</strong> + <strong>Gemini 2.5 Flash</strong>
-                                </p>
+                            <div className="absolute top-4 left-4 right-4 z-50 p-3 bg-red-100 border-4 border-red-500 text-red-700 font-bold flex items-center gap-3 shadow-brutal-sm">
+                                <span className="text-xl">❌</span>
+                                {error}
                             </div>
                         )}
 
-                        {/* Connected State */}
-                        {isConnected && (
-                            <div className="space-y-6">
-                                {/* Mic Visualization */}
-                                <div className="text-center">
+                        {/* STATES */}
+                        {isProcessing ? (
+                            <div className="text-center">
+                                <div className="w-20 h-20 mx-auto border-4 border-black border-t-indigo-500 rounded-full animate-spin mb-6" />
+                                <h3 className="font-display font-bold text-2xl uppercase mb-2">Analyzing Session...</h3>
+                                <p className="text-gray-600 font-medium">Gemini 2.5 is calculating your score.</p>
+                            </div>
+                        ) : !isConnected && transcript ? (
+                            <div className="w-full h-full flex flex-col">
+                                <h3 className="font-display font-bold text-3xl uppercase mb-4 text-center shrink-0">Mission Debrief</h3>
+
+                                <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-6">
+                                    {/* Transcript */}
+                                    <div className="flex-1 bg-gray-50 border-4 border-black p-4 font-mono text-sm overflow-y-auto whitespace-pre-wrap">
+                                        {transcript}
+                                    </div>
+
+                                    {/* Score */}
+                                    <div className="w-full md:w-80 shrink-0 flex flex-col gap-4">
+                                        {isAnalyzing ? (
+                                            <div className="flex-1 flex items-center justify-center border-4 border-black bg-accent-50">
+                                                <Loader2 className="w-8 h-8 animate-spin mr-2" />
+                                                <span className="font-bold uppercase">Scoring...</span>
+                                            </div>
+                                        ) : analysisResult && (
+                                            <div className="flex-1 bg-accent-50 border-4 border-black p-6 shadow-brutal-sm flex flex-col">
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <span className="font-display font-bold uppercase text-lg">Cultural IQ</span>
+                                                    <div className={`text-5xl font-black ${analysisResult.overall_score >= 80 ? 'text-green-600' :
+                                                        analysisResult.overall_score >= 60 ? 'text-yellow-600' : 'text-red-600'
+                                                        }`}>
+                                                        {analysisResult.overall_score}
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm font-medium leading-relaxed overflow-y-auto flex-1">
+                                                    {analysisResult.summary}
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <button
+                                            onClick={() => {
+                                                setTranscript(null);
+                                                setAnalysisResult(null);
+                                                setError(null);
+                                                startSession();
+                                            }}
+                                            disabled={isAnalyzing}
+                                            className="btn-brutal w-full py-4 text-sm"
+                                        >
+                                            Next Mission
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            // IDLE / CONNECTED
+                            <div className="text-center w-full max-w-lg">
+                                {/* Mic Viz */}
+                                <div className="mb-8 relative h-48 flex items-center justify-center">
                                     <motion.div
-                                        className={`inline-flex items-center justify-center w-32 h-32 rounded-full ${isMicActive
-                                            ? 'bg-gradient-to-r from-green-400 to-emerald-600'
-                                            : 'bg-gray-300 dark:bg-gray-600'
+                                        className={`w-36 h-36 border-4 border-black rounded-full flex items-center justify-center shadow-brutal transition-colors duration-300 ${isConnected
+                                            ? (isMicActive ? 'bg-green-500' : 'bg-red-500')
+                                            : 'bg-gray-100'
                                             }`}
-                                        animate={isMicActive ? {
-                                            scale: [1, 1.1, 1],
-                                        } : {}}
-                                        transition={{
-                                            repeat: Infinity,
-                                            duration: 1.5
-                                        }}
+                                        animate={isConnected && isMicActive ? { scale: [1, 1.05, 1] } : {}}
+                                        transition={{ repeat: Infinity, duration: 1.5 }}
                                     >
-                                        {isMicActive ? (
-                                            <Mic className="w-16 h-16 text-white" />
+                                        {isConnected ? (
+                                            isMicActive ? <Mic className="w-16 h-16 text-black" /> : <MicOff className="w-16 h-16 text-white" />
                                         ) : (
-                                            <MicOff className="w-16 h-16 text-white" />
+                                            <Mic className="w-16 h-16 text-gray-400" />
                                         )}
                                     </motion.div>
-
-                                    <p className="mt-4 text-lg font-semibold text-gray-900 dark:text-white">
-                                        {isMicActive ? t('arena.listening') : t('arena.muted')}
-                                    </p>
                                 </div>
 
-                                {/* Controls */}
-                                <div className="flex items-center justify-center gap-4">
-                                    <motion.button
-                                        onClick={toggleMic}
-                                        className={`px-6 py-3 rounded-full font-semibold transition-all ${isMicActive
-                                            ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                                            : 'bg-green-500 hover:bg-green-600 text-white'
-                                            }`}
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
+                                {/* Text Status */}
+                                <h2 className="font-display font-bold text-4xl uppercase mb-2">
+                                    {isConnected ? (isMicActive ? "Adjusting..." : "Muted") : "Ready to Train"}
+                                </h2>
+                                <p className="text-lg text-gray-600 mb-8 font-medium">
+                                    {isConnected ? "Speak naturally. AI is listening." : `Practice your ${currentLanguageInfo?.nativeName} skills.`}
+                                </p>
+
+                                {/* Buttons */}
+                                {!isConnected ? (
+                                    <button
+                                        onClick={startSession}
+                                        disabled={isConnecting}
+                                        className="btn-brutal w-full text-xl py-4 flex items-center justify-center gap-3 disabled:opacity-50"
                                     >
-                                        {isMicActive ? t('arena.mute') : t('arena.unmute')}
-                                    </motion.button>
-
-                                    <motion.button
-                                        onClick={endSession}
-                                        className="px-6 py-3 bg-red-500 hover:bg-red-600 text-white rounded-full font-semibold transition-all"
-                                        whileHover={{ scale: 1.05 }}
-                                        whileTap={{ scale: 0.95 }}
-                                    >
-                                        {t('arena.end_session')}
-                                    </motion.button>
-                                </div>
-
-                                {/* Session Info */}
-                                <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
-                                        🧠 {t('arena.culturally_aware')} •
-                                        🎙️ {t('arena.real_time')} •
-                                        ✨ {t('arena.gemini_powered')}
-                                    </p>
-                                </div>
-
-                                {/* Call Duration */}
-                                <div className="text-center pt-4">
-                                    <Timer isRunning={isConnected} />
-                                </div>
+                                        {isConnecting ? <Loader2 className="animate-spin" /> : <Mic />}
+                                        Start Simulation
+                                    </button>
+                                ) : (
+                                    <div className="flex gap-4">
+                                        <button onClick={toggleMic} className="flex-1 btn-brutal-outline py-4">
+                                            {isMicActive ? 'Mute' : 'Unmute'}
+                                        </button>
+                                        <button onClick={endSession} className="flex-1 btn-brutal bg-red-500 text-white border-black py-4 hover:bg-red-600">
+                                            End Session
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         )}
-                    </motion.div>
-
-                    {/* How It Works */}
-                    <motion.div
-                        className="mt-8 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 dark:from-indigo-900/20 dark:to-purple-900/20 rounded-2xl p-6"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={{ delay: 0.4 }}
-                    >
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                            {t('arena.how_it_works')}
-                        </h3>
-                        <ol className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                            <li>1️⃣ Gemini 2.5 Flash generates a culturally-aware roleplay character</li>
-                            <li>2️⃣ Cartesia AI creates a voice agent with your custom scenario</li>
-                            <li>3️⃣ Speak naturally and receive real-time, culturally-appropriate responses</li>
-                            <li>4️⃣ Practice sales techniques with realistic customer personas</li>
-                        </ol>
-                    </motion.div>
+                    </div>
                 </motion.div>
+            </div>
+
+            {/* Footer / How it works - Very Compact */}
+            <div className="bg-white border-t-4 border-black p-3 z-10 shrink-0">
+                <div className="container mx-auto flex items-center justify-between text-xs font-bold uppercase tracking-wider text-gray-500">
+                    <div className="hidden md:flex gap-6">
+                        <span className="flex items-center gap-2"><span className="w-2 h-2 bg-black rounded-full" /> Gemini 2.5 Persona</span>
+                        <span className="flex items-center gap-2"><span className="w-2 h-2 bg-black rounded-full" /> Cartesia Voice</span>
+                        <span className="flex items-center gap-2"><span className="w-2 h-2 bg-black rounded-full" /> Culture Check</span>
+                    </div>
+                    <div>
+                        Lingo.dev Arena v1.0
+                    </div>
+                </div>
             </div>
         </div>
     );
 }
+

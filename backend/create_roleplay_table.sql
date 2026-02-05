@@ -17,10 +17,14 @@ CREATE TABLE IF NOT EXISTS public.roleplay_prompts (
 ALTER TABLE public.roleplay_prompts ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Allow authenticated users to read
+DROP POLICY IF EXISTS "Allow authenticated read access" ON public.roleplay_prompts;
+
 CREATE POLICY "Allow authenticated read access" ON public.roleplay_prompts FOR
 SELECT TO authenticated USING (true);
 
 -- Policy: Allow service role to insert/update
+DROP POLICY IF EXISTS "Allow service role write access" ON public.roleplay_prompts;
+
 CREATE POLICY "Allow service role write access" ON public.roleplay_prompts FOR ALL TO service_role USING (true)
 WITH
     CHECK (true);
@@ -36,6 +40,8 @@ BEGIN
     RETURN NEW;
 END;
 $$ language 'plpgsql';
+
+DROP TRIGGER IF EXISTS update_roleplay_prompts_updated_at ON public.roleplay_prompts;
 
 CREATE TRIGGER update_roleplay_prompts_updated_at 
     BEFORE UPDATE ON public.roleplay_prompts

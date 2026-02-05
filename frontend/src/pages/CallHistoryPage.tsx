@@ -234,7 +234,8 @@ export default function CallHistoryPage() {
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.05 }}
-                                className="bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 transition-all"
+                                onClick={() => window.location.href = `/calls/${call.id}`}
+                                className="bg-white border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:translate-x-1 hover:translate-y-1 transition-all cursor-pointer"
                             >
                                 <div className="p-6 flex items-center gap-6">
                                     {/* Score Badge */}
@@ -254,6 +255,11 @@ export default function CallHistoryPage() {
                                             <div className="flex items-center gap-1">
                                                 <User className="w-4 h-4" />
                                                 <span className="font-bold">{call.customer_name || 'Unknown'}</span>
+                                                {call.customer_name === 'AI Roleplay Agent' && (
+                                                    <span className="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase rounded-full border border-indigo-200">
+                                                        🤖 AI
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="flex items-center gap-1">
                                                 <Clock className="w-4 h-4" />

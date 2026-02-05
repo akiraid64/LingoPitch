@@ -33,6 +33,7 @@ class SessionRequest(BaseModel):
     language_code: str
     user_id: str
     playbook: str = "B2B SaaS Sales"
+    product_description: str | None = None
 
 class SessionResponse(BaseModel):
     agent_id: str
@@ -59,18 +60,31 @@ async def start_session(request: SessionRequest):
     async with httpx.AsyncClient() as client:
         try:
             typescript_backend_url = os.getenv("TYPESCRIPT_BACKEND_URL", "http://localhost:3001")
-            print(f"[HTTP] Fetching prompt from: {typescript_backend_url}/api/roleplay/generate-prompt")
+            print(f"[HTTP] URL: {typescript_backend_url}/api/roleplay/generate-prompt")
             
             response = await client.post(
                 f"{typescript_backend_url}/api/roleplay/generate-prompt",
-                json={"languageCode": request.language_code}
+                json={
+                    "languageCode": request.language_code,
+                    "productDescription": request.product_description
+                },
+                timeout=30.0 # Increased timeout
             )
+            
+            print(f"[HTTP] Prompt Response Status: {response.status_code}")
+            print(f"[HTTP] Prompt Response Body Preview: {response.text[:200]}")
+            
             response.raise_for_status()
             prompt_data = response.json()
             
-            print(f"[HTTP] ✅ Received prompt ({len(prompt_data['prompt'])} chars)")
+            print(f"[HTTP] ✅ Received prompt ({len(prompt_data.get('prompt', ''))} chars)")
+        except httpx.HTTPStatusError as e:
+            print(f"[HTTP] ❌ Backend returned error: {e.response.status_code} - {e.response.text}")
+            raise HTTPException(status_code=500, detail=f"Backend error: {e.response.text}")
         except Exception as e:
             print(f"[HTTP] ❌ Failed to fetch prompt: {str(e)}")
+            import traceback
+            traceback.print_exc()
             raise HTTPException(status_code=500, detail=f"Failed to fetch prompt: {str(e)}")
     
     # Step 2: Create Cartesia access token

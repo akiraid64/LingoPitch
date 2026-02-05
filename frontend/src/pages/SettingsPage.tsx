@@ -1,7 +1,68 @@
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
-import { Building2, Ticket, CheckCircle, AlertCircle } from 'lucide-react';
+import { Building2, Ticket, CheckCircle, AlertCircle, Save } from 'lucide-react';
+
+function OrganizationSettings({ org }: { org: any }) {
+    const { updateOrganization } = useAuth();
+    const [description, setDescription] = useState(org.product_description || '');
+    const [saving, setSaving] = useState(false);
+    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+    const handleSave = async () => {
+        setSaving(true);
+        setMessage(null);
+        try {
+            await updateOrganization(org.id, { product_description: description });
+            setMessage({ type: 'success', text: 'Product description updated!' });
+        } catch (err) {
+            setMessage({ type: 'error', text: 'Failed to save changes.' });
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <div>
+                <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-2">
+                    Product Context for AI Roleplay
+                </label>
+                <div className="text-xs text-gray-600 mb-2 font-bold">
+                    Describe what your team sells. The AI customers will use this to ask relevant questions.
+                </div>
+                <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full h-32 px-4 py-3 bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] focus:translate-x-1 focus:translate-y-1 focus:shadow-none transition-all outline-none font-medium text-sm resize-none"
+                    placeholder="e.g. We sell a B2B SaaS platform for inventory management that helps small retailers reduce stockouts..."
+                />
+            </div>
+
+            {message && (
+                <div className={`p-4 border-2 border-black font-bold text-sm flex items-center gap-2 ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                    }`}>
+                    {message.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+                    {message.text}
+                </div>
+            )}
+
+            <button
+                onClick={handleSave}
+                disabled={saving}
+                className="px-6 py-3 bg-black text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50 flex items-center gap-2 font-black uppercase tracking-widest text-sm"
+            >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Save Changes
+            </button>
+        </div>
+    );
+}
+
+// Simple internal loader to avoid import issues if not available
+function Loader2({ className }: { className?: string }) {
+    return <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>;
+}
 
 export function SettingsPage() {
     const { profile, joinOrganization } = useAuth();
@@ -68,6 +129,18 @@ export function SettingsPage() {
                     )}
                 </div>
             </div>
+
+            {/* Organization Settings (Manager Only) */}
+            {(profile?.role === 'sales_manager' || profile?.role === 'manager') && profile?.organizations && (
+                <div className="bg-white border-8 border-black p-8 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+                    <h2 className="font-black text-2xl uppercase mb-6 flex items-center gap-3">
+                        <Building2 className="w-6 h-6" />
+                        Organization Settings
+                    </h2>
+
+                    <OrganizationSettings org={profile.organizations} />
+                </div>
+            )}
 
             {/* Join Organization (if not already in one) */}
             {!profile?.org_id && (

@@ -14,6 +14,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (password: string) => Promise<void>;
   joinOrganization: (referralCode: string) => Promise<void>;
+  updateOrganization: (orgId: string, updates: { product_description?: string; name?: string }) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -431,6 +432,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await fetchProfile(user.id);
   };
 
+  const updateOrganization = async (orgId: string, updates: { product_description?: string; name?: string }) => {
+    const { error } = await supabase
+      .from('organizations')
+      .update(updates)
+      .eq('id', orgId);
+
+    if (error) throw error;
+
+    // Refresh profile to get latest org data
+    if (user) await fetchProfile(user.id);
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -445,6 +458,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         resetPassword,
         updatePassword,
         joinOrganization,
+        updateOrganization,
       }}
     >
       {children}
