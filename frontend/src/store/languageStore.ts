@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { SUPPORTED_LANGUAGES } from '@/config/languages';
 
 export interface CulturalProfile {
     languageCode: string;
@@ -97,7 +98,24 @@ export const useLanguageStore = create<LanguageState>()(
 
             setTargetLocale: (localeCode: string | null) => {
                 console.log('🔄 languageStore: Setting targetLocale to:', localeCode);
-                set({ targetLocale: localeCode });
+
+                // Find the language info
+                const langInfo = SUPPORTED_LANGUAGES.find((l: any) => l.code === localeCode);
+
+                set({
+                    targetLocale: localeCode,
+                    // Also update the "Current Language" display to match the target
+                    ...(langInfo && {
+                        currentLanguage: localeCode || 'en',
+                        currentLanguageInfo: {
+                            code: langInfo.code,
+                            name: langInfo.name,
+                            nativeName: langInfo.nativeName,
+                            flag: langInfo.flag,
+                            region: langInfo.region || 'Global'
+                        }
+                    })
+                });
             },
 
             fetchCulturalProfile: async (langCode: string) => {

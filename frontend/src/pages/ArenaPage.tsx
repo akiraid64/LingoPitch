@@ -78,6 +78,12 @@ export function ArenaPage() {
         };
 
         if (targetLocale) {
+            // Safety: If we are already connected and language changes, 
+            // end the session to prevent persona mismatch.
+            if (isConnected) {
+                console.log('[ARENA] 🌍 Language changed mid-session. Ending current session for consistency.');
+                endSession();
+            }
             fetchPrompt();
         }
     }, [targetLocale, profile?.organizations?.id]);
@@ -311,14 +317,15 @@ export function ArenaPage() {
                     <div className="w-80 shrink-0 flex flex-col gap-4">
                         <div className="flex-1 bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden">
                             <div className="bg-black text-white px-4 py-2 font-display font-bold uppercase text-sm tracking-wider">
-                                Mission Briefing
+                                {t('arena.mission_briefing')}
                             </div>
                             <div className="p-4 flex-1 overflow-y-auto">
-                                <h4 className="font-display font-bold uppercase text-xs text-gray-400 mb-2">Active Customer Persona</h4>
+                                <h4 className="font-display font-bold uppercase text-xs text-gray-400 mb-2">{t('arena.active_persona')}</h4>
                                 {isGeneratingPrompt ? (
                                     <div className="flex items-center gap-2 text-gray-500 italic text-sm">
                                         <Loader2 className="w-4 h-4 animate-spin" />
-                                        <span>Crafting persona...</span>
+                                        <span>{t('arena.crafting_persona')}</span>
+
                                     </div>
                                 ) : (
                                     <div className="bg-gray-50 border-2 border-black p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
@@ -344,12 +351,12 @@ export function ArenaPage() {
                         {isProcessing ? (
                             <div className="text-center">
                                 <div className="w-20 h-20 mx-auto border-4 border-black border-t-indigo-500 rounded-full animate-spin mb-6" />
-                                <h3 className="font-display font-bold text-2xl uppercase mb-2">Analyzing Session...</h3>
-                                <p className="text-gray-600 font-medium">Gemini 2.5 is calculating your score.</p>
+                                <h3 className="font-display font-bold text-2xl uppercase mb-2">{t('arena.analyzing_session')}</h3>
+                                <p className="text-gray-600 font-medium">{t('arena.calculating_score')}</p>
                             </div>
                         ) : !isConnected && transcript ? (
                             <div className="w-full h-full flex flex-col">
-                                <h3 className="font-display font-bold text-3xl uppercase mb-4 text-center shrink-0">Mission Debrief</h3>
+                                <h3 className="font-display font-bold text-3xl uppercase mb-4 text-center shrink-0">{t('arena.mission_debrief')}</h3>
 
                                 <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-6">
                                     {/* Transcript */}
@@ -362,12 +369,12 @@ export function ArenaPage() {
                                         {isAnalyzing ? (
                                             <div className="flex-1 flex items-center justify-center border-4 border-black bg-accent-50">
                                                 <Loader2 className="w-8 h-8 animate-spin mr-2" />
-                                                <span className="font-bold uppercase">Scoring...</span>
+                                                <span className="font-bold uppercase">{t('arena.scoring')}</span>
                                             </div>
                                         ) : analysisResult && (
                                             <div className="flex-1 bg-accent-50 border-4 border-black p-6 shadow-brutal-sm flex flex-col">
                                                 <div className="flex justify-between items-start mb-4">
-                                                    <span className="font-display font-bold uppercase text-lg">Cultural IQ</span>
+                                                    <span className="font-display font-bold uppercase text-lg">{t('arena.cultural_iq')}</span>
                                                     <div className={`text-5xl font-black ${analysisResult.overall_score >= 80 ? 'text-green-600' :
                                                         analysisResult.overall_score >= 60 ? 'text-yellow-600' : 'text-red-600'
                                                         }`}>
@@ -390,7 +397,7 @@ export function ArenaPage() {
                                             disabled={isAnalyzing}
                                             className="btn-brutal w-full py-4 text-sm"
                                         >
-                                            Next Mission
+                                            {t('arena.next_mission')}
                                         </button>
                                     </div>
                                 </div>
@@ -418,10 +425,10 @@ export function ArenaPage() {
 
                                 {/* Text Status */}
                                 <h2 className="font-display font-bold text-4xl uppercase mb-2">
-                                    {isConnected ? (isMicActive ? "Adjusting..." : "Muted") : "Ready to Train"}
+                                    {isConnected ? (isMicActive ? t('arena.adjusting') : t('arena.muted')) : t('arena.ready_to_train')}
                                 </h2>
                                 <p className="text-lg text-gray-600 mb-8 font-medium">
-                                    {isConnected ? "Speak naturally. AI is listening." : `Practice your ${currentLanguageInfo?.nativeName} skills.`}
+                                    {isConnected ? t('arena.speak_naturally') : `${t('arena.practice_skills')} (${currentLanguageInfo?.nativeName})`}
                                 </p>
 
                                 {/* Buttons */}
@@ -432,15 +439,15 @@ export function ArenaPage() {
                                         className="btn-brutal w-full text-xl py-4 flex items-center justify-center gap-3 disabled:opacity-50"
                                     >
                                         {isConnecting ? <Loader2 className="animate-spin" /> : <Mic />}
-                                        Start Simulation
+                                        {t('arena.start_simulation')}
                                     </button>
                                 ) : (
                                     <div className="flex gap-4">
                                         <button onClick={toggleMic} className="flex-1 btn-brutal-outline py-4">
-                                            {isMicActive ? 'Mute' : 'Unmute'}
+                                            {isMicActive ? t('arena.mute') : t('arena.unmute')}
                                         </button>
                                         <button onClick={endSession} className="flex-1 btn-brutal bg-red-500 text-white border-black py-4 hover:bg-red-600">
-                                            End Session
+                                            {t('arena.end_session')}
                                         </button>
                                     </div>
                                 )}
