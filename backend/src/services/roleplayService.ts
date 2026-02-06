@@ -2,131 +2,166 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { supabaseAdmin } from '../lib/supabase.js';
 import type { LanguageVariant } from '../config/languages.js';
 
-const PROMPT_GENERATOR_TEMPLATE = `You are a world-class actor and roleplay expert.
+const PROMPT_GENERATOR_TEMPLATE = `You are a world-class actor and roleplay expert specializing in B2B sales psychology.
 You are playing the role of a potential customer, NOT the salesperson.
-Your goal is to provide a realistic sales roleplay scenario for the user (who is the salesperson).
+Your goal is to provide a realistic, tough, and culturally nuanced roleplay.
 
-**YOUR ROLE:**
-- Name: [Invent a local name based on region]
-- Region: {{nativeName}} ({{accent}} accent)
+**YOUR PERSONA (THE SOURCE OF TRUTH):**
+{{org_scenario}}
+
+**YOUR IDENTITY IN THIS CALL:**
+- Name: {{persona_name}}
+- Region/Target Market: {{nativeName}}
+- Regional Accent: {{accent}}
 - Language: {{language}}
-- Context: You are a cold lead. You did NOT ask for this call.
+- Conversation Context: You are a cold lead on a busy day.
 
-**YOUR PROBLEM (THE REASON FOR THE SALES OPPORTUNITY):**
-- Based on the product description below, invent a specific, realistic PAIN POINT or BUSINESS PROBLEM that this person is facing.
-- You are frustrated or stressed by this problem, but you do not yet know the user's product is the solution.
-- You should mention symptoms of this problem naturally during the conversation.
-
-**CRITICAL INSTRUCTIONS:**
-1. **START:** You must WAIT for the user to speak first. If there is silence, say "Hello? Who is this?" with suspicion.
-2. **ANTI-ASSISTANT:** You are NOT a helpful AI. You are a busy person with a problem.
+**CULTURAL & BEHAVIORAL HARDENING:**
+1. **AUTHENTICITY:** Use {{accent}} expressions, local idioms, and regional sentence structures.
+2. **BEHAVIORAL RIGOR:**
+   - **Directness:** Follow {{nativeName}} norms for directness (e.g., US is blunt/ROI-focused, UK is polite but skeptical).
+   - **Decision Making:** Use the decision-making style defined in your persona (Analytical, Emotional, Bureaucratic, etc.).
+3. **TABOOS:** Strictly avoid topics considered inappropriate in {{nativeName}} business culture.
+4. **ANTI-ASSISTANT MENTALITY:**
    - NEVER ask "How can I help you?".
    - NEVER say "Is there anything else?".
-   - If the user asks "What can I do for you?", reply: "You called me! Who are you?".
-3. **TONE:** Skeptical, busy, slightly annoyed initially.
-4. **KNOWLEDGE:** You know NOTHING about the user's company unless told.
-5. **CULTURAL AUTHENTICITY:**
-   - Use authentic {{accent}} expressions and sentence structures.
-   - Follow typical {{nativeName}} business etiquette (e.g. directness vs politeness).
-   - If the region is high-context, be indirect. If low-context, be direct.
-
-**PRODUCT CONTEXT (What the user is selling):**
-{{product_description}}
-
-**SCENARIO:**
-{{playbook_content}}
+   - Initially act as a "Gatekeeper": suspicious, busy, and questioning the salesperson's value.
 
 **OUTPUT DIRECTIVE:**
-Generate a system prompt for an ElevenLabs/Cartesia agent that embodies this specific persona.
-The prompt should instruct the agent to BE this person completely.
-Return ONLY the prompt text.`;
+Generate a comprehensive system prompt for a voice agent (ElevenLabs/Cartesia).
+The prompt must instruct the agent to COMPLETELY EMBODY this persona.
+Include instructions on tone, pacing, and specific cultural quirks.
+Return ONLY the final prompt text.`;
 
 interface GeneratePromptParams {
     languageCode: string;
     langInfo: LanguageVariant;
-    playbook: string;
     productDescription?: string;
+    orgId?: string;
 }
 
-export async function generateRoleplayPrompt({ languageCode, langInfo, playbook, productDescription }: GeneratePromptParams): Promise<string> {
-    console.log(`[ROLEPLAY] 🌍 Generating prompt for: ${languageCode}`);
+export async function generateRoleplayPrompt({ languageCode, langInfo, productDescription, orgId }: GeneratePromptParams): Promise<string> {
+    console.log(`[ROLEPLAY] 🌍 Generating prompt for: ${languageCode} (Org: ${orgId || 'None'})`);
     console.log(`[ROLEPLAY] 📍 Region: ${langInfo.accent}`);
 
-    // Check cache first (todo: add productDescription dependency to cache key)
-    const { data: cached, error: cacheError } = await supabaseAdmin
-        .from('roleplay_prompts')
-        .select('*')
-        .eq('language_code', languageCode)
-        .single() as any;
+    // Check cache first
+    let cached = null;
+    let cacheError = null;
 
-    // For now, bypass cache if we have custom product description to ensure freshness
-    // This allows the user to update their settings and immediately see effects.
-    if (cached && !cacheError && !productDescription) {
-        console.log(`[ROLEPLAY] ✅ Using cached prompt`);
-        return cached.generated_prompt;
-    } else if (cached && !cacheError && productDescription) {
-        console.log(`[ROLEPLAY] ⚠️ Bypassing cache to include custom product context.`);
+    try {
+        if (orgId) {
+            const result = await (supabaseAdmin
+                .from('roleplay_prompts') as any)
+                .select('*')
+                .eq('language_code', languageCode)
+                .eq('org_id', orgId)
+                .single();
+            cached = result.data;
+            cacheError = result.error;
+        } else {
+            const result = await (supabaseAdmin
+                .from('roleplay_prompts') as any)
+                .select('*')
+                .eq('language_code', languageCode)
+                .single();
+            cached = result.data;
+            cacheError = result.error;
+        }
+    } catch (e) {
+        console.warn(`[ROLEPLAY] ⚠️ Cache lookup failed (possibly missing org_id column):`, e);
     }
 
-    console.log(`[ROLEPLAY] 📖 Playbook loaded (${playbook.length} chars)`);
+    // Use cache if we found it and there are no critical errors
+    if (cached && !cacheError && !productDescription) {
+        console.log(`[ROLEPLAY] ✅ Using cached prompt for Org: ${orgId || 'Global'}`);
+        return cached.generated_prompt;
+    }
+
+    // 1. Fetch Organization Scenario if available
+    let orgScenario = productDescription || 'A busy business owner facing inventory issues.';
+    if (orgId) {
+        const { data: orgData } = await (supabaseAdmin
+            .from('organizations') as any)
+            .select('roleplay_scenario, name')
+            .eq('id', orgId)
+            .single();
+
+        if (orgData?.roleplay_scenario) {
+            console.log(`[ROLEPLAY] 📋 Using persistent Org Scenario`);
+            orgScenario = orgData.roleplay_scenario;
+        }
+    }
+
     console.log(`[ROLEPLAY] 🤖 Calling Gemini 2.5 Flash to generate prompt...`);
 
     // Generate with Gemini
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
     const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
+
+    const personaNames: Record<string, string[]> = {
+        'en-US': ['Alex Miller', 'Jordan Smith', 'Taylor Reed', 'Casey Taylor'],
+        'en-GB': ['Oliver Wright', 'Charlotte Evans', 'James Harrison'],
+        'fr-FR': ['Lucas Bernard', 'Chloé Dubois', 'Julien Moreau'],
+        'es-ES': ['Mateo García', 'Elena Rodríguez', 'Diego López'],
+        'de-DE': ['Maximilian Schmidt', 'Lukas Weber', 'Julia Hoffmann']
+    };
+
+    const possibleNames = personaNames[languageCode] || ['Sam Rivera', 'Jamie Vance'];
+    const personaName = possibleNames[Math.floor(Math.random() * possibleNames.length)];
+
     const prompt = PROMPT_GENERATOR_TEMPLATE
         .replace('{{language}}', langInfo.language)
         .replace('{{nativeName}}', langInfo.nativeName)
         .replace('{{accent}}', langInfo.accent)
         .replace('{{code}}', langInfo.code)
-        .replace('{{company_name}}', 'Lingo.dev') // Could be dynamic
-        .replace('{{product_description}}', productDescription || 'A generic B2B software product')
-        .replace('{{playbook_content}}', playbook);
+        .replace('{{persona_name}}', personaName)
+        .replace('{{org_scenario}}', orgScenario || "A skeptical potential customer interested in your product.");
+
 
     const result = await model.generateContent(prompt);
     const generatedPrompt = result.response.text();
 
     console.log(`[ROLEPLAY] ✨ Generated prompt (${generatedPrompt.length} chars)`);
     console.log(`[ROLEPLAY] 📝 Preview: ${generatedPrompt.substring(0, 200)}...`);
-    console.log(`[ROLEPLAY] 📄 FULL PROMPT:\n${generatedPrompt}\n`);
 
 
     // Save to cache (upsert to handle updates)
-    // Save to cache (upsert to handle updates)
-    const { error: upsertError } = await (supabaseAdmin
-        .from('roleplay_prompts') as any)
-        .upsert({
+    try {
+        const upsertData: any = {
             language_code: languageCode,
             generated_prompt: generatedPrompt,
-            playbook_version: 'v1.1', // Incremented to invalidate cache for new persona
+            playbook_version: 'v1.1',
             updated_at: new Date().toISOString()
-        }, {
-            onConflict: 'language_code'
-        });
+        };
 
-    if (upsertError) {
-        console.error(`[ROLEPLAY] ⚠️ Failed to cache prompt:`, upsertError);
-    } else {
-        console.log(`[ROLEPLAY] 💾 Cached for future use`);
+        if (orgId) {
+            upsertData.org_id = orgId;
+        }
+
+        try {
+            const { error: upsertError } = await (supabaseAdmin
+                .from('roleplay_prompts') as any)
+                .upsert(upsertData, {
+                    onConflict: orgId ? ['org_id', 'language_code'] : 'language_code'
+                });
+
+            if (upsertError) {
+                console.error(`[ROLEPLAY] ⚠️ Failed to cache prompt (check if org_id column/unique constraint exists):`, upsertError.message);
+            } else {
+                console.log(`[ROLEPLAY] 💾 Cached for future use`);
+            }
+        } catch (upsertErr: any) {
+            console.warn(`[ROLEPLAY] ⚠️ Unexpected error during cache upsert (skipping cache):`, upsertErr.message);
+        }
+    } catch (e) {
+        console.warn(`[ROLEPLAY] ⚠️ Cache save failed:`, e);
     }
 
     return generatedPrompt;
 }
 
 export async function getPlaybookContent(): Promise<string> {
-    // TODO: Replace with actual playbook from database
-    return `Product: Lingo.dev - AI-powered sales training platform
-    
-Target Market: B2B SaaS sales teams
-Price Point: $49-199 per user/month
-
-Key Features:
-- AI roleplay with cultural intelligence
-- Real-time feedback on sales calls
-- 24 language variants with authentic accents
-- Integration with CRM systems
-
-Value Proposition: 
-Train your sales team to sell globally with AI-powered cultural intelligence.`;
+    // Playbook is now handled via org_scenario or separated entirely.
+    return "DEPRECATED: Using organization-specific dynamic scenarios instead.";
 }

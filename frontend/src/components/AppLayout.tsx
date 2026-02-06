@@ -50,7 +50,6 @@ function TranslatableContentWrapper({ children, targetLocale, path }: { children
     // Removed unused isTranslated state
     const contentRef = useRef<HTMLDivElement>(null);
     const originalHtmlRef = useRef<string>('');
-    const hasTranslatedRef = useRef(false);
 
     // Global cache (outside component to persist across nav)
     // We use a composite key: "locale:path"
@@ -98,7 +97,7 @@ function TranslatableContentWrapper({ children, targetLocale, path }: { children
             // innerHTML replacement kills React listeners (onClick, onSubmit), 
             // so we skip full-page translation for them completely.
             // They should rely on UI-String translation (nav/sidebar) or internal translation logic.
-            const skippedRoutes = ['/advisor', '/arena', '/team'];
+            const skippedRoutes = ['/advisor', '/arena', '/team', '/progress', '/settings'];
             if (skippedRoutes.some(route => path.includes(route))) {
                 console.log(`[AppLayout] ⚠️ Skipping translation for interactive route: ${path}`);
                 return;

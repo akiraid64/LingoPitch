@@ -13,6 +13,8 @@ import playbooksRoutes from './routes/playbooks.js';
 import translationRoutes from './routes/translation.js';
 import roleplayRoutes from './routes/roleplay.js';
 import voiceAgentRoutes from './routes/voiceAgent.js';
+import organizationRoutes from './routes/organization.js';
+
 
 config();
 
@@ -64,6 +66,8 @@ app.use('/api/playbooks', playbooksRoutes);   // Sales Playbooks
 app.use('/api/translation', translationRoutes); // Real-time Translation (Lingo.dev)
 app.use('/api/roleplay', roleplayRoutes);     // ElevenLabs Roleplay (Gemini-powered)
 app.use('/api/voice-agent', voiceAgentRoutes); // Cartesia Voice Agent (Python bridge)
+app.use('/api/organization', organizationRoutes); // Organization settings and personas
+
 
 // Health check endpoint
 app.get('/api/health', (_req, res) => {

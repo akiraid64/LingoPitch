@@ -1,26 +1,82 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { motion } from 'framer-motion';
 import { Building2, Ticket, CheckCircle, AlertCircle, Save } from 'lucide-react';
 
 function OrganizationSettings({ org }: { org: any }) {
+    console.log('[SETTINGS] 🟦 OrganizationSettings Render - Org:', org?.id);
+
+    useEffect(() => {
+        console.log('[SETTINGS] 🚀 OrganizationSettings MOUNTED and ACTIVE');
+    }, []);
+
     const { updateOrganization } = useAuth();
+
     const [description, setDescription] = useState(org.product_description || '');
+    const [scenario, setScenario] = useState(org.roleplay_scenario || '');
     const [saving, setSaving] = useState(false);
+    const [lastAttempt, setLastAttempt] = useState<string | null>(null);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
+
     const handleSave = async () => {
+        const timestamp = new Date().toLocaleTimeString();
+        setLastAttempt(timestamp);
+        console.log(`[SETTINGS] 🔘 [${timestamp}] handleSave started`);
+
+        if (!org?.id) {
+            console.error('[SETTINGS] ❌ No Org ID found!');
+            alert('CRITICAL ERROR: Organization ID is missing. Check logs.');
+            setMessage({ type: 'error', text: 'Error: Organization ID is missing.' });
+            return;
+        }
+
         setSaving(true);
         setMessage(null);
         try {
-            await updateOrganization(org.id, { product_description: description });
-            setMessage({ type: 'success', text: 'Product description updated!' });
-        } catch (err) {
-            setMessage({ type: 'error', text: 'Failed to save changes.' });
+            const baseUrl = (import.meta as any).env.VITE_API_URL || 'http://localhost:3001';
+            console.log('[SETTINGS] 🔗 Requesting:', `${baseUrl}/api/organization/${org.id}/settings`);
+
+            const response = await fetch(`${baseUrl}/api/organization/${org.id}/settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ product_description: description })
+            });
+
+            console.log('[SETTINGS] 📥 Response Status:', response.status);
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ error: 'Unknown server error' }));
+                console.error('[SETTINGS] ❌ Response Error:', errorData);
+                alert(`API Error (${response.status}): ${errorData.error || response.statusText}`);
+                throw new Error(errorData.error || 'Failed to save settings');
+            }
+
+            const data = await response.json();
+            console.log('[SETTINGS] ✅ Success:', data);
+
+            if (data.organization?.roleplay_scenario) {
+                setScenario(data.organization.roleplay_scenario);
+            }
+
+            // Also update the local auth context so the rest of the app knows
+            await updateOrganization(org.id, {
+                product_description: description,
+                roleplay_scenario: data.organization.roleplay_scenario
+            });
+
+            setMessage({ type: 'success', text: `Success! Persona recrafted at ${timestamp}` });
+            alert('Persona recrafted successfully!');
+        } catch (err: any) {
+            console.error('[SETTINGS] ❌ Catch:', err);
+            alert(`Error during save: ${err.message}`);
+            setMessage({ type: 'error', text: `Failed: ${err.message}` });
         } finally {
             setSaving(false);
+            console.log(`[SETTINGS] 🔚 [${timestamp}] handleSave ended`);
         }
     };
+
 
     return (
         <div className="space-y-6">
@@ -53,9 +109,38 @@ function OrganizationSettings({ org }: { org: any }) {
                 className="px-6 py-3 bg-black text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] hover:shadow-none hover:translate-x-1 hover:translate-y-1 transition-all disabled:opacity-50 flex items-center gap-2 font-black uppercase tracking-widest text-sm"
             >
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Save Changes
+                Save & Recraft Persona
             </button>
+
+            {lastAttempt && (
+                <div className="mt-2 text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                    Last attempt: {lastAttempt}
+                </div>
+            )}
+
+            {scenario && (
+
+                <div className="mt-8 pt-8 border-t-4 border-black border-dashed">
+                    <label className="block text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3">
+                        Current AI Persona (System Prompt)
+                    </label>
+                    <div className="bg-yellow-50 border-4 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden">
+                        <div className="absolute top-0 right-0 bg-black text-white px-3 py-1 text-[10px] font-black uppercase tracking-tighter">
+                            Active Persona
+                        </div>
+                        <div className="prose prose-sm max-w-none">
+                            <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-gray-800">
+                                {scenario}
+                            </pre>
+                        </div>
+                    </div>
+                    <p className="mt-4 text-[10px] text-gray-500 font-bold italic">
+                        * This persona is dynamically generated by Gemini 2.5 Flash whenever you update your product context.
+                    </p>
+                </div>
+            )}
         </div>
+
     );
 }
 
