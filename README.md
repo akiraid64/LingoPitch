@@ -53,7 +53,7 @@ Sales reps often struggle because:
 
 Cultural resonance is treated as a core architectural layer rather than a secondary feature. Through the integration of Lingo.dev and specialized prompt engineering, the following capabilities are achieved:
 
-- **Real-time UI Localization:** The entire interface, including mission briefings and persona profiles, is dynamically localized using the Lingo.dev SDK to ensure complete immersion.
+- **Multilingual AI Advisor:** Every chat response is dynamically localized using the Lingo.dev SDK, allowing users to receive complex sales coaching and playbook deep-dives in their native language while maintaining the strategic integrity of the original methodology.
 - **Regional Behavioral Hardening:** AI personas are injected with regional business norms, local idioms, and specific cultural taboos. A "Discovery Call" in Tokyo is designed to feel fundamentally different from one in New York.
 - **Cultural Accuracy Scoring:** Every session is evaluated by Gemini against a specialized rubric:
     1. **Cultural Appropriateness:** Adherence to regional business etiquette.
@@ -75,50 +75,19 @@ Cultural resonance is treated as a core architectural layer rather than a second
 - **Persona Recrafting:** Gemini generates deep-dive persona profiles (Pain points, Vibe, ROI-triggers) automatically.
 - **Team Monitoring:** Detailed views of individual member performance and detailed rubrics.
 
-### 3. Team Analytics and Progress Tracking
+### 3. Analytics and Performance Tracking
 - **Skill Cluster Radar:** Visualizes strengths (Discovery, Value Prop, etc.) across the organization.
 - **Performance Leaderboards:** Gamification for top-scoring sales representatives.
 - **Executive Summaries:** Auto-generated summaries and actionable coaching tips for every call.
 
-### 4. Cultural Sales Advisor (AI Chat)
-- **Full Context Integration:** Chat with an AI that knows your team's history, call transcripts, and specialized sales playbooks.
+### 4. Sales Playbook Engine (RAG Intelligence)
+- **Vectorized Knowledge Base:** Upload PDF playbooks to create a Retrieval-Augmented Generation (RAG) memory.
+- **Proprietary Source of Truth:** The AI Sales Advisor uses high-speed Vector Search to grounding its advice in your company's specific sales methodology.
+- **Compliance and Adherence:** Automatically cross-references call transcripts against playbooks to identify missing steps or deviations.
 
 ---
 
-## System Workflow
-
-### User Interaction Flow
-```mermaid
-graph TD
-    A[Manager] -->|Sets Product Context| B(Gemini Persona Engine)
-    B -->|Generated Profile| C[(Supabase DB)]
-    D[Sales Agent] -->|Selects Target Market| E{Lingo.dev}
-    E -->|Localizes UI & Context| F[Arena Page]
-    F -->|Voice Input| G[Cartesia Voice Agent]
-    G --- H[Gemini Logic]
-    H -->|Post-session Analysis| I[Team Analytics & AI Advisor]
-```
-
-### Voice Handshake (Technical)
-```mermaid
-sequenceDiagram
-    participant FE as Frontend (React)
-    participant BE as TS Backend (Express)
-    participant PY as Python Bridge (FastAPI)
-    participant C as Cartesia API
-    participant G as Gemini API
-
-    FE->>BE: POST /api/voice-agent/start-session
-    BE->>PY: POST /api/voice/start-session
-    PY->>BE: GET /api/roleplay/generate-prompt
-    BE->>G: Craft System Prompt
-    G-->>BE: Final Persona
-    BE-->>PY: Persona Provided
-    PY->>C: Request Access Token
-    C-->>PY: Token Received
-    PY-->>FE: WebSocket URL + Token
-    FE->>C: Direct wss:// connection
-```
+## Technical Architecture Overview
 
 ---
 
@@ -148,7 +117,7 @@ sequenceDiagram
 
 ---
 
-## Codebase Index (File Mapping)
+## Technical Context and File Index
 
 ### Folder: backend/src/
 - **index.ts**: Main entry point; registers all 12+ API route groups.
@@ -175,18 +144,10 @@ sequenceDiagram
 
 ## Tech Stack
 - **Frontend**: React 19, Vite, Tailwind CSS, Framer Motion, Zustand.
-- **Backend**: Node.js (Express), TypeScript, Gemini 2.5 Flash, Supabase.
+- **Backend**: Node.js (Express), TypeScript, Gemini 2.5 Flash, Supabase (**pgvector** for RAG).
 - **Voice Agent**: Python (FastAPI), Cartesia AI.
+- **Intelligence**: Retrieval-Augmented Generation (RAG) and Semantic Search.
 - **Localization**: Lingo.dev SDK.
-
----
-
-## Installation
-
-1. **Repository Setup:** `git clone https://github.com/singularity-forge/Lingo.Pitch.git`
-2. **Environment Configuration:** Configure .env files in frontend, backend, and voice-agent using provided .env.example templates.
-3. **Dependency Installation:** `npm install` (Root), `npm install` (Sub-folders), `pip install -r requirements.txt` (Voice Agent).
-4. **Execution:** Run services concurrently (Ports 3001, 5173, 8001).
 
 ---
 
