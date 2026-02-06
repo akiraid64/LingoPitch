@@ -16,14 +16,34 @@ export function AnalyzePage() {
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
-        if (!file) return;
+        console.log('📂 [handleFileUpload] File input changed. Selected file:', file?.name, file?.type, file?.size);
+
+        if (!file) {
+            console.log('⚠️ [handleFileUpload] No file selected or selection cancelled');
+            return;
+        }
 
         setFileName(file.name);
         const reader = new FileReader();
+
+        reader.onprogress = (event) => {
+            if (event.lengthComputable) {
+                console.log(`⏳ [handleFileUpload] Reading file: ${Math.round((event.loaded / event.total) * 100)}%`);
+            }
+        };
+
         reader.onload = (event) => {
+            console.log('✅ [handleFileUpload] File read successfully');
             const text = event.target?.result as string;
+            console.log('📄 [handleFileUpload] Transcript snippet (first 100 chars):', text.substring(0, 100));
             setTranscript(text);
         };
+
+        reader.onerror = (err) => {
+            console.error('❌ [handleFileUpload] FileReader error:', err);
+        };
+
+        console.log('🚀 [handleFileUpload] Starting file read as text...');
         reader.readAsText(file);
     };
 
@@ -111,7 +131,10 @@ export function AnalyzePage() {
 
                         {/* File Upload Button */}
                         <div
-                            onClick={() => fileInputRef.current?.click()}
+                            onClick={() => {
+                                console.log('🖱️ [AnalyzePage] Upload button clicked');
+                                fileInputRef.current?.click();
+                            }}
                             className="border-3 border-dashed border-dark-200 hover:border-primary-500 hover:bg-primary-50 
                                      rounded-xl p-8 mb-6 cursor-pointer transition-colors text-center group relative"
                         >
