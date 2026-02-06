@@ -7,11 +7,13 @@ LingoPitch is a **Universal Sales Hardening Platform** designed to prepare sales
 
 ---
 
-## Try the App Live
-You can access the production environment here:
-**[https://sublime-nature-production.up.railway.app/](https://sublime-nature-production.up.railway.app/)**
+## 🚀 Try it Live & Watch the Walkthrough
 
----
+**[Access the LingoPitch Production App](https://sublime-nature-production.up.railway.app/)**
+
+[![LingoPitch Walkthrough Video](https://img.youtube.com/vi/PWKJZ_ZJSxg/0.jpg)](https://youtu.be/PWKJZ_ZJSxg)
+
+In this video, I walk you through LingoPitch, a platform designed to train sales agents globally, regardless of their cultural backgrounds. I demonstrate how to analyze calls, focusing on cultural nuances and coaching tips, with examples from the US and Japan. I also highlight the roleplay feature for customer interactions and how managers can track team performance and analytics. While I encountered challenges with language formality, I emphasize the importance of adapting communication styles. Please explore the platform and familiarize yourself with its features to enhance our training efforts.
 
 ## How It Works: A Visual Guide
 ![LingoPitch Platform Summary](Gemini_Generated_Image_pfuokppfuokppfuo.png)
@@ -49,12 +51,6 @@ Sales reps often struggle because:
 
 ---
 
-## Demo and Overview
-
-<div style="position: relative; padding-bottom: 56.25%; height: 0;"><iframe src="https://www.loom.com/embed/a50af822289d4d3ea5d4258dc1430c36" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe></div>
-
-
----
 
 ## Lingo.dev: The Cultural Intelligence Core
 
