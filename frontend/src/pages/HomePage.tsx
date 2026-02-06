@@ -45,9 +45,9 @@ export function HomePage() {
                         className="font-display font-bold text-6xl md:text-8xl lg:text-9xl
                        uppercase tracking-tight mb-6 leading-none"
                     >
-                        <span className="gradient-text">Train</span> to Sell
+                        <span className="gradient-text">Close</span> the
                         <br />
-                        <span className="text-stroke text-transparent">Anywhere</span>
+                        <span className="text-stroke text-transparent">Culture Gap</span>
                     </motion.h1>
 
                     {/* Subtitle */}
@@ -55,11 +55,11 @@ export function HomePage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-xl md:text-2xl text-dark-700 mb-12 max-w-3xl mx-auto font-body font-medium"
+                        className="text-xl md:text-2xl text-dark-700 mb-12 max-w-4xl mx-auto font-body font-medium"
                     >
-                        Master sales in <strong className="text-primary-600">{availableLanguages.length}+ languages</strong>.
-                        Practice with AI prospects. Get cultural intelligence coaching.
-                        Close deals globally.
+                        Master sales in **80+ locales** with **high-fidelity cultural simulation**.
+                        Train with ultra-low latency AI prospects grounded in your company's own playbooks.
+                        Don't just translate—harden your instincts for global markets.
                     </motion.p>
 
                     {/* CTA Buttons */}
@@ -87,9 +87,9 @@ export function HomePage() {
                         className="mt-16 grid grid-cols-3 gap-4 max-w-3xl mx-auto"
                     >
                         {[
-                            { value: '80+', label: 'Languages' },
-                            { value: '10+', label: 'Cultural Norms' },
-                            { value: '4', label: 'Skill Parameters' },
+                            { value: '<200ms', label: 'Voice Latency' },
+                            { value: 'RAG', label: 'Playbook Intelligence' },
+                            { value: '80+', label: 'Cultural Locales' },
                         ].map((stat, i) => (
                             <div
                                 key={i}
@@ -129,12 +129,11 @@ export function HomePage() {
                                 <Languages className="w-8 h-8" />
                             </div>
                             <h3 className="font-display font-bold text-2xl uppercase mb-4">
-                                1. Select Language
+                                1. Regional Hardening
                             </h3>
                             <p className="text-dark-700 leading-relaxed">
-                                Choose from <strong>80+ languages</strong>. Our AI instantly
-                                generates cultural context, taboos, and power phrases for
-                                that region.
+                                Select from <strong>80+ locales</strong>. Our engine adapts not just the language,
+                                but the **accent and business etiquette** specific to that market.
                             </p>
                         </motion.div>
 
@@ -152,11 +151,11 @@ export function HomePage() {
                                 <Mic className="w-8 h-8" />
                             </div>
                             <h3 className="font-display font-bold text-2xl uppercase mb-4">
-                                2. Practice with AI
+                                2. High-Fidelity Practice
                             </h3>
                             <p className="text-dark-700 leading-relaxed">
-                                Roleplay with AI prospects who <strong>behave authentically</strong>
-                                for their culture. Get real-time hints when you make cultural mistakes.
+                                Roleplay with ultra-low latency AI customers who push back with real objections.
+                                Fail for free in a **safe, risk-free simulator** before the live call.
                             </p>
                         </motion.div>
 
@@ -174,13 +173,24 @@ export function HomePage() {
                                 <Brain className="w-8 h-8" />
                             </div>
                             <h3 className="font-display font-bold text-2xl uppercase mb-4">
-                                3. Get Scored
+                                3. RAG Intelligence
                             </h3>
                             <p className="text-dark-700 leading-relaxed">
-                                Receive a <strong>Cultural IQ Score</strong> plus 10 standard
-                                sales parameters. Track your improvement over time.
+                                Get scored via **12+ cultural rubrics**. Your AI Advisor uses **Vector Search**
+                                to ground all coaching in your company's own sales playbooks.
                             </p>
                         </motion.div>
+                    </div>
+
+                    <div className="mt-20">
+                        <h3 className="font-display font-bold text-3xl uppercase mb-8 text-center">
+                            The Architecture of Sales Success
+                        </h3>
+                        <img
+                            src="/Gemini_Generated_Image_pfuokppfuokppfuo.png"
+                            alt="How LingoPitch Works"
+                            className="w-full border-8 border-black shadow-brutal-lg rounded-xl"
+                        />
                     </div>
                 </div>
             </section>
@@ -194,12 +204,17 @@ export function HomePage() {
 
                     <div className="max-w-5xl mx-auto relative z-10">
                         <div className="text-center mb-12">
-                            <div className="text-8xl mb-4">{currentLanguageInfo.flag}</div>
+                            <div className="text-8xl mb-8 flex justify-center gap-4">
+                                <span className="animate-bounce">🌍</span>
+                                <span className="animate-bounce" style={{ animationDelay: '0.2s' }}>🇯🇵</span>
+                                <span className="animate-bounce" style={{ animationDelay: '0.4s' }}>🇬🇧</span>
+                                <span className="animate-bounce" style={{ animationDelay: '0.6s' }}>🇩🇪</span>
+                            </div>
                             <h2 className="font-display font-bold text-5xl uppercase mb-4">
-                                Currently Training In
+                                Supported Locales
                             </h2>
                             <p className="text-3xl text-accent-300 font-display">
-                                {currentLanguageInfo.name}
+                                80+ Countries • Infinite Personas
                             </p>
                         </div>
 
