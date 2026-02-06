@@ -55,15 +55,42 @@ export function ArenaPage() {
     const agentIdRef = useRef<string | null>(null); // Ref to avoid stale closure in callbacks
     const [error, setError] = useState<string | null>(null);
 
+    const [systemPrompt, setSystemPrompt] = useState<string>('Generating persona...');
+    const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
+
+    // Fetch initial prompt or when language changes
+    useEffect(() => {
+        const fetchPrompt = async () => {
+            setIsGeneratingPrompt(true);
+            try {
+                const orgId = profile?.organizations?.id || '';
+                const response = await fetch(`${API_URL}/api/roleplay/prompt/${targetLocale}?orgId=${orgId}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    setSystemPrompt(data.prompt);
+                }
+            } catch (err) {
+                console.error('[ARENA] Failed to fetch prompt:', err);
+                setSystemPrompt('Failed to load persona briefing.');
+            } finally {
+                setIsGeneratingPrompt(false);
+            }
+        };
+
+        if (targetLocale) {
+            fetchPrompt();
+        }
+    }, [targetLocale, profile?.organizations?.id]);
+
     const startSession = async () => {
-        console.log(`[ARENA] 🎙️ Starting voice session for: ${targetLocale}`);
+        console.log(`[ARENA] 🚀 Starting voice session for: ${targetLocale}`);
         setIsConnecting(true);
         setError(null);
         agentIdRef.current = null;
 
         try {
             // (which fetches Gemini prompt and proxies to Python agent)
-            console.log('[ARENA] 🔄 Requesting session from backend...');
+            console.log('[ARENA] 📡 Requesting session from backend...');
 
             // Get product description from profile organization
             // Note: We use 'any' casting because TS definitions for profile might not be fully updated
@@ -81,6 +108,8 @@ export function ArenaPage() {
                     language_code: targetLocale,
                     // Use current user ID or a valid 0000... fallback for unauthenticated testing to avoid DB UUID errors
                     user_id: profile?.id || '00000000-0000-0000-0000-000000000000',
+                    orgId: profile?.organizations?.id,
+                    system_prompt: systemPrompt, // PASS THE VISIBLE PROMPT
                     playbook: 'B2B SaaS Sales',
                     product_description: productDesc
                 })
@@ -191,7 +220,7 @@ export function ArenaPage() {
                 formData.append('product_description', productDesc);
                 formData.append('language_code', targetLocale || 'en'); // Required for analysis
 
-                console.log('[ARENA] 📤 Uploading session audio...', { size: audioBlob.size, duration });
+                console.log('[ARENA] 🎙️ Uploading session audio...', { size: audioBlob.size, duration });
 
                 const resp = await fetch(`${API_URL}/api/voice-agent/end-session`, {
                     method: 'POST',
@@ -276,8 +305,30 @@ export function ArenaPage() {
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="w-full max-w-5xl h-full flex gap-4"
+                    className="w-full max-w-7xl h-full flex gap-4"
                 >
+                    {/* Mission Briefing Sidebar */}
+                    <div className="w-80 shrink-0 flex flex-col gap-4">
+                        <div className="flex-1 bg-white border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] flex flex-col overflow-hidden">
+                            <div className="bg-black text-white px-4 py-2 font-display font-bold uppercase text-sm tracking-wider">
+                                Mission Briefing
+                            </div>
+                            <div className="p-4 flex-1 overflow-y-auto">
+                                <h4 className="font-display font-bold uppercase text-xs text-gray-400 mb-2">Active Customer Persona</h4>
+                                {isGeneratingPrompt ? (
+                                    <div className="flex items-center gap-2 text-gray-500 italic text-sm">
+                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <span>Crafting persona...</span>
+                                    </div>
+                                ) : (
+                                    <div className="bg-gray-50 border-2 border-black p-3 font-mono text-[11px] leading-relaxed whitespace-pre-wrap">
+                                        {systemPrompt}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Interaction Panel */}
                     <div className="flex-1 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 md:p-8 flex flex-col items-center justify-center relative overflow-hidden">
 

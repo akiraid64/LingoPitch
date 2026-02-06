@@ -40,95 +40,101 @@ export class CartesiaVoiceClient {
     /**
      * Connect to Cartesia voice agent WebSocket
      */
-    async connect(websocketUrl: string, metadata: any, accessToken: string) {
-        console.log('[CARTESIA] Connecting to:', websocketUrl);
-        console.log('[CARTESIA] Using access token for auth');
+    async connect(websocketUrl: string, metadata: any, accessToken: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            try {
+                console.log('[CARTESIA] Connecting to:', websocketUrl);
+                console.log('[CARTESIA] Using access token for auth');
 
-        // Note: WebSocket in browser doesn't support custom headers directly
-        // We authenticating via query parameter in the URL
-        const authenticatedUrl = `${websocketUrl}?access_token=${accessToken}&cartesia_version=2025-04-16`;
-        this.ws = new WebSocket(authenticatedUrl);
-        this.streamId = `stream_${Date.now()}`;
-        this.audioContext = new AudioContext({ sampleRate: 44100 });
+                // Note: WebSocket in browser doesn't support custom headers directly
+                // We authenticate via query parameter in the URL
+                const authenticatedUrl = `${websocketUrl}?access_token=${accessToken}&cartesia_version=2025-04-16`;
+                this.ws = new WebSocket(authenticatedUrl);
+                this.streamId = `stream_${Date.now()}`;
 
-        // Create recording destination
-        this.recordingDestination = this.audioContext.createMediaStreamDestination();
-        this.audioChunks = [];
+                // Always create a fresh AudioContext if needed
+                if (!this.audioContext || this.audioContext.state === 'closed') {
+                    this.audioContext = new AudioContext({ sampleRate: 44100 });
+                }
 
-        this.ws.onopen = () => {
-            console.log('[CARTESIA] ✅ WebSocket connected successfully');
+                // Create recording destination
+                this.recordingDestination = this.audioContext.createMediaStreamDestination();
+                this.audioChunks = [];
 
-            // Send start event with configuration
-            const startMessage = {
-                event: 'start',
-                stream_id: this.streamId,
-                config: { input_format: 'pcm_44100' },
-                agent: {
-                    system_prompt: metadata.system_prompt,
-                    introduction: ''  // Wait for user to speak first
-                },
-                metadata: metadata
-            };
+                let isHandshaked = false;
 
-            // Send clean start message (auth already handled in URL)
-            console.log('[CARTESIA] 📤 Sending start event');
-            this.ws?.send(JSON.stringify(startMessage));
+                this.ws.onopen = () => {
+                    console.log('[CARTESIA] ✅ WebSocket connected successfully');
 
-            console.log('[CARTESIA] Sent start event');
-        };
+                    // Send start event with configuration
+                    const startMessage = {
+                        event: 'start',
+                        stream_id: this.streamId,
+                        config: {
+                            input_format: 'pcm_44100'
+                        },
+                        agent: {
+                            system_prompt: metadata.system_prompt,
+                            introduction: '', // Wait for user. Empty string prevents default greeting.
+                            // Ensure the agent doesn't fallback to a generic helpful assistant
+                            prioritize_system_prompt: true
+                        },
+                        metadata: metadata
+                    };
 
-        this.ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            // Debug: Log all events to find transcript format
-            // console.log('[CARTESIA] Rx:', data.event); 
-
-            switch (data.event) {
-                case 'ack':
-                    // Stream configuration acknowledged
-                    this.streamId = data.stream_id;
-                    console.log('[CARTESIA] Stream acknowledged:', this.streamId);
+                    console.log('[CARTESIA] 📤 Sending start event');
+                    this.ws?.send(JSON.stringify(startMessage));
+                    // We consider it connected once the start message is sent
+                    isHandshaked = true;
                     this.onConnected?.();
-                    break;
+                    resolve();
+                };
 
-                case 'media_output':
-                    // Agent is speaking - play audio
-                    // console.log('[CARTESIA] Received audio chunk');
-                    this.playAudio(data.media.payload);
-                    break;
+                this.ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    switch (data.event) {
+                        case 'ack':
+                            this.streamId = data.stream_id;
+                            console.log('[CARTESIA] Stream acknowledged:', this.streamId);
+                            break;
+                        case 'media_output':
+                            this.playAudio(data.media.payload);
+                            break;
+                        case 'clear':
+                            this.clearAudio();
+                            break;
+                        case 'error':
+                            console.error('[CARTESIA] ❌ Server error:', data.message);
+                            if (!isHandshaked) reject(new Error(data.message));
+                            break;
+                    }
+                };
 
-                case 'clear':
-                    // Agent wants to interrupt/clear current audio
-                    console.log('[CARTESIA] Clear signal received');
-                    this.clearAudio();
-                    break;
+                this.ws.onerror = (error) => {
+                    console.error('[CARTESIA] ❌ WebSocket error:', error);
+                    if (!isHandshaked) {
+                        this.cleanup();
+                        reject(new Error('WebSocket connection failed'));
+                    }
+                };
 
-                case 'dtmf':
-                case 'custom':
-                case 'transcription':
-                case 'transcript':
-                case 'stt':
-                case 'speech_to_text':
-                case 'llm_output':
-                case 'agent_output':
-                    // Ignoring text events as we are moving to Gemini Audio recording
-                    break;
+                this.ws.onclose = (event) => {
+                    console.log('[CARTESIA] WebSocket closed:', event.code, event.reason);
+                    if (!isHandshaked) {
+                        this.cleanup();
+                        reject(new Error(`WebSocket closed early: ${event.reason || 'Unknown error'}`));
+                    }
+                    this.onDisconnected?.();
+                    this.cleanup();
+                };
 
-                default:
-                // console.log('[CARTESIA] Unknown event:', data.event);
+            } catch (err) {
+                this.cleanup();
+                reject(err);
             }
-        };
-
-        this.ws.onerror = (error) => {
-            console.error('[CARTESIA] ❌ WebSocket error:', error);
-            this.onError?.('WebSocket connection failed');
-        };
-
-        this.ws.onclose = (event) => {
-            console.log('[CARTESIA] WebSocket closed:', event.code);
-            this.onDisconnected?.();
-            this.cleanup();
-        };
+        });
     }
+
 
     /**
      * Start capturing and streaming microphone audio
@@ -150,6 +156,12 @@ export class CartesiaVoiceClient {
             });
 
             console.log('[CARTESIA] ✅ Microphone access granted');
+
+            // Defensive check: if connection was closed while waiting for mic, stop here
+            if (!this.audioContext) {
+                console.warn('[CARTESIA] Connection closed while waiting for microphone access');
+                return;
+            }
 
             const source = this.audioContext.createMediaStreamSource(stream);
 

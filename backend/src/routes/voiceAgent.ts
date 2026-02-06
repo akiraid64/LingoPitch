@@ -25,8 +25,10 @@ router.post('/start-session', async (req: Request, res: Response) => {
             body: JSON.stringify({
                 language_code: req.body.language_code || 'en',
                 user_id: req.body.user_id || 'anonymous',
+                org_id: req.body.org_id || req.body.orgId,
                 playbook: req.body.playbook || 'B2B SaaS Sales',
-                product_description: req.body.product_description
+                product_description: req.body.product_description,
+                system_prompt: req.body.system_prompt // PASS IT THROUGH
             })
         });
 

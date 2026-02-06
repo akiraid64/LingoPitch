@@ -34,6 +34,7 @@ class SessionRequest(BaseModel):
     user_id: str
     playbook: str = "B2B SaaS Sales"
     product_description: str | None = None
+    system_prompt: str | None = None  # Optional prompt override
 
 class SessionResponse(BaseModel):
     agent_id: str
@@ -42,59 +43,49 @@ class SessionResponse(BaseModel):
     system_prompt: str
     metadata: dict
 
-@app.get("/health")
-async def health():
-    return {"status": "ok", "service": "cartesia-voice-bridge"}
-
 @app.post("/api/voice/start-session", response_model=SessionResponse)
 async def start_session(request: SessionRequest):
     """
-    1. Fetch Gemini-generated prompt from TypeScript backend
+    1. Check for manual prompt override or fetch from TS backend
     2. Create Cartesia access token
     3. Return WebSocket connection details
     """
     print(f"[HTTP] Starting session for user: {request.user_id}")
-    print(f"[HTTP] Language: {request.language_code}, Playbook: {request.playbook}")
     
-    # Step 1: Fetch prompt from TypeScript backend
-    async with httpx.AsyncClient() as client:
-        try:
-            typescript_backend_url = os.getenv("TYPESCRIPT_BACKEND_URL", "http://localhost:3001")
-            print(f"[HTTP] URL: {typescript_backend_url}/api/roleplay/generate-prompt")
-            
-            response = await client.post(
-                f"{typescript_backend_url}/api/roleplay/generate-prompt",
-                json={
-                    "languageCode": request.language_code,
-                    "productDescription": request.product_description
-                },
-                timeout=30.0 # Increased timeout
-            )
-            
-            print(f"[HTTP] Prompt Response Status: {response.status_code}")
-            print(f"[HTTP] Prompt Response Body Preview: {response.text[:200]}")
-            
-            response.raise_for_status()
-            prompt_data = response.json()
-            
-            print(f"[HTTP] ✅ Received prompt ({len(prompt_data.get('prompt', ''))} chars)")
-        except httpx.HTTPStatusError as e:
-            print(f"[HTTP] ❌ Backend returned error: {e.response.status_code} - {e.response.text}")
-            raise HTTPException(status_code=500, detail=f"Backend error: {e.response.text}")
-        except Exception as e:
-            print(f"[HTTP] ❌ Failed to fetch prompt: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            raise HTTPException(status_code=500, detail=f"Failed to fetch prompt: {str(e)}")
+    final_prompt = request.system_prompt
+    
+    # Step 1: Get prompt (either from request or from backend)
+    if final_prompt:
+        print(f"[HTTP] ✅ Using manual prompt override ({len(final_prompt)} chars)")
+    else:
+        print("[HTTP] 📡 Fetching generated prompt from TS backend...")
+        async with httpx.AsyncClient() as client:
+            try:
+                typescript_backend_url = os.getenv("TYPESCRIPT_BACKEND_URL", "http://localhost:3001")
+                response = await client.post(
+                    f"{typescript_backend_url}/api/roleplay/generate-prompt",
+                    json={
+                        "languageCode": request.language_code,
+                        "productDescription": request.product_description
+                    },
+                    timeout=30.0
+                )
+                response.raise_for_status()
+                prompt_data = response.json()
+                final_prompt = prompt_data["prompt"]
+                print(f"[HTTP] 📥 Received prompt from backend ({len(final_prompt)} chars)")
+            except Exception as e:
+                print(f"[HTTP] ❌ Failed to fetch prompt: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Failed to fetch prompt: {str(e)}")
     
     # Step 2: Create Cartesia access token
+    # ... (same as before) ...
     cartesia_api_key = os.getenv("CARTESIA_API_KEY")
     if not cartesia_api_key:
         raise HTTPException(status_code=500, detail="CARTESIA_API_KEY not configured")
     
     try:
         async with httpx.AsyncClient() as client:
-            print(f"[HTTP] Requesting access token from https://api.cartesia.ai/access-token")
             token_response = await client.post(
                 "https://api.cartesia.ai/access-token",
                 headers={
@@ -102,50 +93,31 @@ async def start_session(request: SessionRequest):
                     "Cartesia-Version": "2025-04-16"
                 },
                 json={
-                    "grants": {
-                        "agent": True  # Required permission for voice agents
-                    },
-                    "expires_in": 3600  # 1 hour validity
+                    "grants": { "agent": True },
+                    "expires_in": 3600
                 }
             )
-            # Print full response for debugging
-            print(f"[HTTP] Token Response Status: {token_response.status_code}")
-            print(f"[HTTP] Token Response Headers: {token_response.headers}")
-            print(f"[HTTP] Token Response Body: {token_response.text}")
-            
             token_response.raise_for_status()
             access_token = token_response.json().get("access_token") or token_response.json().get("token")
-            
-            if not access_token:
-                 print(f"[HTTP] ❌ Access token missing from response keys: {token_response.json().keys()}")
-                 raise ValueError("Access token not found in response")
-
-            print(f"[HTTP] ✅ Created access token (valid for 1 hour)")
-    except httpx.HTTPStatusError as e:
-        print(f"[HTTP] ❌ Access Token Error: {e.response.text}")
-        raise HTTPException(status_code=500, detail=f"Failed to create access token: {e.response.text}")
     except Exception as e:
         print(f"[HTTP] ❌ Failed to create access token: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Failed to create access token: {str(e)}")
     
     # Step 3: Prepare metadata for the agent
-    # This will be passed to Cartesia and available in the agent's context
     metadata = {
         "language_code": request.language_code,
         "user_id": request.user_id,
         "playbook": request.playbook,
-        "system_prompt": prompt_data["prompt"]
+        "system_prompt": final_prompt
     }
     
-    # Use the agent ID provided by the user
-    agent_id = "agent_hVL2nqC4ojsVmKzu1NA2MF"
+    agent_id = "agent_bVJVHJEoXdAsKXL1hxrFMX"
     
-    # Return connection details for frontend
     return SessionResponse(
         agent_id=f"cartesia_agent_{request.user_id}",
         websocket_url=f"wss://api.cartesia.ai/agents/stream/{agent_id}",
         access_token=access_token,
-        system_prompt=prompt_data["prompt"],
+        system_prompt=final_prompt,
         metadata=metadata
     )
 
