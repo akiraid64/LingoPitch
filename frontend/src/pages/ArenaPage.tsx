@@ -41,7 +41,9 @@ function Timer({ isRunning }: { isRunning: boolean }) {
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
 export function ArenaPage() {
-    const { currentLanguageInfo, targetLocale } = useLanguageStore();
+    const { currentLanguageInfo, targetLocale: rawTargetLocale } = useLanguageStore();
+    // Fallback to current UI language if no target is selected (e.g. direct visit)
+    const targetLocale = rawTargetLocale || currentLanguageInfo?.code || 'en-US';
     const { t } = useTranslation();
     const { profile } = useAuth();
     const [client] = useState(() => new CartesiaVoiceClient(
