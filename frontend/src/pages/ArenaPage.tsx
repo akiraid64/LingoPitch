@@ -55,7 +55,7 @@ export function ArenaPage() {
     const agentIdRef = useRef<string | null>(null); // Ref to avoid stale closure in callbacks
     const [error, setError] = useState<string | null>(null);
 
-    const [systemPrompt, setSystemPrompt] = useState<string>('Generating persona...');
+    const [systemPrompt, setSystemPrompt] = useState<string>('');
     const [isGeneratingPrompt, setIsGeneratingPrompt] = useState(false);
 
     // Fetch initial prompt or when language changes
@@ -435,7 +435,7 @@ export function ArenaPage() {
                                 {!isConnected ? (
                                     <button
                                         onClick={startSession}
-                                        disabled={isConnecting}
+                                        disabled={isConnecting || isGeneratingPrompt || !systemPrompt}
                                         className="btn-brutal w-full text-xl py-4 flex items-center justify-center gap-3 disabled:opacity-50"
                                     >
                                         {isConnecting ? <Loader2 className="animate-spin" /> : <Mic />}
