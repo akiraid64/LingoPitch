@@ -3,7 +3,7 @@ import { supabaseAdmin } from '../lib/supabase.js';
 
 const router = express.Router();
 
-const PYTHON_AGENT_URL = process.env.PYTHON_AGENT_URL || 'http://localhost:8001';
+const PYTHON_AGENT_URL = process.env.VOICE_AGENT_URL || process.env.PYTHON_AGENT_URL || 'http://localhost:8001';
 
 /**
  * Proxy endpoint to start a voice session with Python Cartesia agent
