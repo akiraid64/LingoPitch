@@ -41,6 +41,7 @@ function Timer({ isRunning }: { isRunning: boolean }) {
 const API_URL = (import.meta as any).env?.VITE_API_URL || 'http://localhost:3001';
 
 export function ArenaPage() {
+    const { currentLanguageInfo, targetLocale: rawTargetLocale } = useLanguageStore();
     // Fallback and Normalize: 'en' -> 'en-US' (Backend requires full locale)
     let targetLocale = rawTargetLocale || currentLanguageInfo?.code || 'en-US';
     if (targetLocale === 'en') targetLocale = 'en-US';
