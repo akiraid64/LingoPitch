@@ -22,7 +22,6 @@ load_dotenv()
 app = FastAPI()
 
 # Allow requests from TypeScript backend and frontend
-# Allow requests from TypeScript backend and frontend
 allowed_origins = [
     "http://localhost:3001", 
     "http://localhost:5173", 
@@ -48,6 +47,7 @@ app.add_middleware(
 class SessionRequest(BaseModel):
     language_code: str
     user_id: str
+    org_id: str | None = None  # Traceability
     playbook: str = "B2B SaaS Sales"
     product_description: str | None = None
     system_prompt: str | None = None  # Optional prompt override
@@ -66,7 +66,7 @@ async def start_session(request: SessionRequest):
     2. Create Cartesia access token
     3. Return WebSocket connection details
     """
-    print(f"[HTTP] Starting session for user: {request.user_id}")
+    print(f"[HTTP] Starting session for user: {request.user_id} (Org: {request.org_id})")
     
     final_prompt = request.system_prompt
     
@@ -82,7 +82,8 @@ async def start_session(request: SessionRequest):
                     f"{typescript_backend_url}/api/roleplay/generate-prompt",
                     json={
                         "languageCode": request.language_code,
-                        "productDescription": request.product_description
+                        "productDescription": request.product_description,
+                        "orgId": request.org_id
                     },
                     timeout=30.0
                 )
@@ -95,7 +96,6 @@ async def start_session(request: SessionRequest):
                 raise HTTPException(status_code=500, detail=f"Failed to fetch prompt: {str(e)}")
     
     # Step 2: Create Cartesia access token
-    # ... (same as before) ...
     cartesia_api_key = os.getenv("CARTESIA_API_KEY")
     if not cartesia_api_key:
         raise HTTPException(status_code=500, detail="CARTESIA_API_KEY not configured")
@@ -123,15 +123,17 @@ async def start_session(request: SessionRequest):
     metadata = {
         "language_code": request.language_code,
         "user_id": request.user_id,
+        "org_id": request.org_id,
         "playbook": request.playbook,
         "system_prompt": final_prompt
     }
     
-    agent_id = "agent_bVJVHJEoXdAsKXL1hxrFMX"
+    # Use environment variable for agent ID, fallback to the working default
+    agent_id = os.getenv("CARTESIA_AGENT_ID", "agent_bVJVHJEoXdAsKXL1hxrFMX")
     
     return SessionResponse(
         agent_id=f"cartesia_agent_{request.user_id}",
-        websocket_url=f"wss://api.cartesia.ai/agents/stream/{agent_id}",
+        websocket_url=f"wss://api.cartesia.ai/agents/{agent_id}/stream",
         access_token=access_token,
         system_prompt=final_prompt,
         metadata=metadata
