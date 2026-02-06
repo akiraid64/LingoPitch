@@ -4,8 +4,8 @@
  */
 
 import { Router, Request, Response } from 'express';
-import { translateText, translateChat, detectLanguage, translateHtmlWithProgress } from '../services/translationService';
-import { SUPPORTED_LANGUAGES, getLanguageByCode } from '../config/languages';
+import { translateText, translateChat, detectLanguage, translateHtmlWithProgress } from '../services/translationService.js';
+import { SUPPORTED_LANGUAGES, getLanguageByCode } from '../config/languages.js';
 
 const router = Router();
 
@@ -184,7 +184,7 @@ router.post('/ui-strings', async (req: Request, res: Response) => {
         console.log(`[UI-Strings] 🔄 Translating to: ${lingoDotDevTarget}`);
 
         // Use the translation service with progress tracking
-        const { translateObjectWithProgress } = await import('../services/translationService');
+        const { translateObjectWithProgress } = await import('../services/translationService.js');
 
         const translated = await translateObjectWithProgress(
             strings,
