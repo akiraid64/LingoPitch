@@ -22,9 +22,25 @@ load_dotenv()
 app = FastAPI()
 
 # Allow requests from TypeScript backend and frontend
+# Allow requests from TypeScript backend and frontend
+allowed_origins = [
+    "http://localhost:3001", 
+    "http://localhost:5173", 
+    "http://127.0.0.1:3001", 
+    "http://127.0.0.1:5173",
+    "https://sublime-nature-production.up.railway.app",  # Production Frontend
+    "https://lingopitch-production.up.railway.app"       # Production Backend
+]
+
+# Add origins from env var
+extra_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
+for origin in extra_origins:
+    if origin.strip():
+        allowed_origins.append(origin.strip())
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3001", "http://localhost:5173", "http://127.0.0.1:3001", "http://127.0.0.1:5173"],
+    allow_origins=allowed_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )
