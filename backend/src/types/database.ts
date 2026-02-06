@@ -1,3 +1,12 @@
+// Helper types
+export type Json =
+    | string
+    | number
+    | boolean
+    | null
+    | { [key: string]: Json | undefined }
+    | Json[]
+
 // Row definitions
 export interface CulturalProfileRow {
     id: string;
@@ -22,9 +31,9 @@ export interface CallRow {
     language_code: string;
     scenario: string;
     transcript: string;
-    analysis: any;
-    scores: any;
-    cultural_scores: any;
+    analysis: Json;
+    scores: Json;
+    cultural_scores: Json;
     duration_seconds: number;
     created_at: string;
 }
@@ -47,7 +56,7 @@ export interface AnalyticsEventRow {
     id: string;
     user_id: string;
     event_type: string;
-    event_data: any;
+    event_data: Json;
     created_at: string;
 }
 
@@ -59,23 +68,40 @@ export interface Database {
                 Row: CulturalProfileRow;
                 Insert: Omit<CulturalProfileRow, 'id' | 'created_at' | 'updated_at'>;
                 Update: Partial<Omit<CulturalProfileRow, 'id' | 'created_at' | 'updated_at'>>;
+                Relationships: [];
             };
             calls: {
                 Row: CallRow;
                 Insert: Omit<CallRow, 'id' | 'created_at'>;
                 Update: Partial<Omit<CallRow, 'id' | 'created_at'>>;
+                Relationships: [];
             };
             user_profiles: {
                 Row: UserProfileRow;
                 Insert: Omit<UserProfileRow, 'id' | 'created_at' | 'updated_at'>;
                 Update: Partial<Omit<UserProfileRow, 'id' | 'created_at' | 'updated_at'>>;
+                Relationships: [];
             };
             analytics_events: {
                 Row: AnalyticsEventRow;
                 Insert: Omit<AnalyticsEventRow, 'id' | 'created_at'>;
                 Update: Partial<Omit<AnalyticsEventRow, 'id' | 'created_at'>>;
+                Relationships: [];
             };
+        };
+        Views: {
+            [_ in never]: never;
+        };
+        Functions: {
+            [_ in never]: never;
+        };
+        Enums: {
+            [_ in never]: never;
+        };
+        CompositeTypes: {
+            [_ in never]: never;
         };
     };
 }
+
 
