@@ -109,10 +109,10 @@ export const useLanguageStore = create<LanguageState>()(
                         currentLanguage: localeCode || 'en',
                         currentLanguageInfo: {
                             code: langInfo.code,
-                            name: langInfo.name,
+                            name: langInfo.language,
                             nativeName: langInfo.nativeName,
                             flag: langInfo.flag,
-                            region: langInfo.region || 'Global'
+                            region: langInfo.accent || 'Global'
                         }
                     })
                 });
