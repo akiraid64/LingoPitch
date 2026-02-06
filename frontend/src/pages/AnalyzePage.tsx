@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { analyzeCall, CallAnalysisResponse } from '../services/api';
 
 export function AnalyzePage() {
-    const { session } = useAuth();
+    const { session, profile } = useAuth();
     const [transcript, setTranscript] = useState('');
     const [language, setLanguage] = useState('en');
     const [isLoading, setIsLoading] = useState(false);
@@ -52,14 +52,11 @@ export function AnalyzePage() {
             }
 
             console.log('🚀 AnalyzePage: Starting analysis for user ID:', session.user.id);
-            // We need profile to get org_id, but it's available from useAuth
-            // Access profile from outer scope
+            console.log('🔍 AnalyzePage: Using Profile Org ID:', profile?.org_id);
 
             const data = await analyzeCall(session.access_token, transcript, language, {
                 userId: session.user.id,
-                orgId: (window as any).currentUserOrgId // Temporary hack or we can rely on backend to infer? 
-                // Better: fetch profile if not available, OR rely on backend finding profile.
-                // Actually, let's just use what we have in context if possible.
+                orgId: profile?.org_id // Fixed: Get from profile
             });
             console.log('✅ AnalyzePage: Analysis successful, result:', data);
             setResult(data);
