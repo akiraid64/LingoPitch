@@ -115,8 +115,11 @@ async def start_session(request: SessionRequest):
             )
             token_response.raise_for_status()
             access_token = token_response.json().get("access_token") or token_response.json().get("token")
+            # print(f"[HTTP] 🔑 Access Token created")
     except Exception as e:
         print(f"[HTTP] ❌ Failed to create access token: {str(e)}")
+        if hasattr(e, 'response') and e.response:
+             print(f"[HTTP] ❌ API Response: {e.response.text}")
         raise HTTPException(status_code=500, detail=f"Failed to create access token: {str(e)}")
     
     # Step 3: Prepare metadata for the agent
@@ -128,12 +131,16 @@ async def start_session(request: SessionRequest):
         "system_prompt": final_prompt
     }
     
-    # Use environment variable for agent ID, fallback to the working default
-    agent_id = os.getenv("CARTESIA_AGENT_ID", "agent_bVJVHJEoXdAsKXL1hxrFMX")
+    # Hardcoded as requested
+    agent_id = "agent_bVJVHJEoXdAsKXL1hxrFMX"
+    
+    # Corrected URL format: /agents/stream/{agent_id}
+    websocket_url = f"wss://api.cartesia.ai/agents/stream/{agent_id}"
+    print(f"[HTTP] 🔌 Using WebSocket URL: {websocket_url}")
     
     return SessionResponse(
         agent_id=f"cartesia_agent_{request.user_id}",
-        websocket_url=f"wss://api.cartesia.ai/agents/{agent_id}/stream",
+        websocket_url=websocket_url,
         access_token=access_token,
         system_prompt=final_prompt,
         metadata=metadata

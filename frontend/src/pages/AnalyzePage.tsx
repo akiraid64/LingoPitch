@@ -1,13 +1,16 @@
 import { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Upload, FileText, Loader2, CheckCircle, AlertCircle, BarChart2 } from 'lucide-react';
+import { Upload, FileText, Loader2, CheckCircle, AlertCircle, BarChart2, Globe } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { analyzeCall, CallAnalysisResponse } from '../services/api';
+import { useLanguageStore } from '../store/languageStore';
+import { useTranslation } from '../contexts/TranslationContext';
 
 export function AnalyzePage() {
     const { session, profile } = useAuth();
+    const { targetLocale, setTargetLocale, availableLanguages } = useLanguageStore();
+    const { t } = useTranslation();
     const [transcript, setTranscript] = useState('');
-    const [language, setLanguage] = useState('en');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<CallAnalysisResponse | null>(null);
@@ -76,9 +79,9 @@ export function AnalyzePage() {
             console.log('🚀 AnalyzePage: Starting analysis for user ID:', session.user.id);
             console.log('🔍 AnalyzePage: Using Profile Org ID:', profile?.org_id);
 
-            const data = await analyzeCall(session.access_token, transcript, language, {
+            const data = await analyzeCall(session.access_token, transcript, targetLocale || 'en', {
                 userId: session.user.id,
-                orgId: profile?.org_id // Fixed: Get from profile
+                orgId: profile?.org_id
             });
             console.log('✅ AnalyzePage: Analysis successful, result:', data);
             setResult(data);
@@ -99,11 +102,10 @@ export function AnalyzePage() {
                     className="mb-12"
                 >
                     <h1 className="font-display font-bold text-5xl md:text-6xl uppercase mb-4">
-                        Analyze Calls
+                        {t('analyze.title')}
                     </h1>
                     <p className="text-xl text-dark-700 font-medium">
-                        Upload a real call transcript and get scored on 10 sales parameters
-                        + 4 cultural intelligence metrics.
+                        {t('analyze.subtitle')}
                     </p>
                 </motion.div>
 
@@ -117,7 +119,7 @@ export function AnalyzePage() {
                     >
                         <h2 className="font-display font-bold text-2xl uppercase mb-6 flex items-center gap-2">
                             <Upload className="w-6 h-6" />
-                            Input Transcript
+                            {t('analyze.inputTranscript')}
                         </h2>
 
                         {/* Hidden File Input */}
@@ -146,10 +148,10 @@ export function AnalyzePage() {
                                 )}
                             </div>
                             <p className="font-bold text-dark-700">
-                                {fileName ? `Selected: ${fileName}` : 'Click to upload .txt or .vtt'}
+                                {fileName ? `Selected: ${fileName}` : t('analyze.selectFile')}
                             </p>
                             <p className="text-sm text-dark-500">
-                                {fileName ? 'Click again to change' : 'or paste text below'}
+                                {fileName ? t('actions.change') : t('analyze.pasteBelow')}
                             </p>
                         </div>
 
@@ -157,29 +159,27 @@ export function AnalyzePage() {
                         <textarea
                             value={transcript}
                             onChange={(e) => setTranscript(e.target.value)}
-                            placeholder="Paste call transcript here..."
+                            placeholder={t('analyze.placeholder')}
                             className="w-full h-64 px-4 py-3 border-3 border-dark-200 rounded-lg font-mono text-sm
                                      resize-none focus:outline-none focus:border-primary-500 focus:ring-4 focus:ring-primary-100 mb-6"
                         />
 
-                        {/* Controls */}
                         <div className="flex flex-wrap items-center justify-between gap-4">
-                            <select
-                                value={language}
-                                onChange={(e) => setLanguage(e.target.value)}
-                                className="px-4 py-3 border-3 border-dark-900 rounded-lg font-bold bg-white"
-                            >
-                                <option value="en">English (Default)</option>
-                                <option value="es">Spanish</option>
-                                <option value="fr">French</option>
-                                <option value="de">German</option>
-                                <option value="it">Italian</option>
-                                <option value="pt">Portuguese</option>
-                                <option value="nl">Dutch</option>
-                                <option value="ru">Russian</option>
-                                <option value="ja">Japanese</option>
-                                <option value="zh">Chinese</option>
-                            </select>
+                            <div className="flex items-center gap-3 bg-white border-3 border-black p-1">
+                                <Globe className="w-5 h-5 ml-2 text-dark-500" />
+                                <select
+                                    value={targetLocale || 'en'}
+                                    onChange={(e) => setTargetLocale(e.target.value)}
+                                    className="px-4 py-3 font-bold bg-white focus:outline-none"
+                                >
+                                    <option value="en">English</option>
+                                    {availableLanguages.map(lang => (
+                                        <option key={lang.code} value={lang.code}>
+                                            {lang.flag} {lang.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
 
                             <button
                                 onClick={handleAnalyze}
@@ -189,12 +189,12 @@ export function AnalyzePage() {
                                 {isLoading ? (
                                     <>
                                         <Loader2 className="w-5 h-5 animate-spin" />
-                                        Analyzing...
+                                        {t('analyze.analyzing')}
                                     </>
                                 ) : (
                                     <>
                                         <BarChart2 className="w-5 h-5" />
-                                        Analyze Now
+                                        {t('analyze.analyzeButton')}
                                     </>
                                 )}
                             </button>
@@ -214,14 +214,13 @@ export function AnalyzePage() {
                             <>
                                 <div className="glass-card">
                                     <h3 className="font-display font-bold text-lg uppercase mb-3">
-                                        📊 What we analyze
+                                        📊 {t('dashboard.quickActions')}
                                     </h3>
                                     <ul className="text-sm text-dark-700 space-y-2 font-mono">
-                                        <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-green-600" /> Needs Discovery</li>
-                                        <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-green-600" /> Value Proposition</li>
-                                        <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-green-600" /> Objection Handling</li>
-                                        <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-green-600" /> Closing Techniques</li>
-                                        <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-green-600" /> Cultural Fit</li>
+                                        <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-green-600" /> {t('analyze.discovery')}</li>
+                                        <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-green-600" /> {t('analyze.presentation')}</li>
+                                        <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-green-600" /> {t('analyze.objectionHandling')}</li>
+                                        <li className="flex gap-2"><CheckCircle className="w-4 h-4 text-green-600" /> {t('analyze.closing')}</li>
                                     </ul>
                                 </div>
                             </>
@@ -240,41 +239,41 @@ export function AnalyzePage() {
                             {/* Overall Score Card */}
                             <div className="brutal-card bg-dark-900 text-white p-8 flex flex-col md:flex-row items-center justify-between gap-8">
                                 <div>
-                                    <h2 className="font-display font-bold text-3xl uppercase mb-2 text-primary-400">Analysis Complete</h2>
+                                    <h2 className="font-display font-bold text-3xl uppercase mb-2 text-primary-400">{t('analyze.analysisComplete')}</h2>
                                     <p className="text-dark-300">Call ID: {result.call.id}</p>
                                 </div>
                                 <div className="text-center">
                                     <div className="text-7xl font-black text-white p-4 border-4 border-white inline-block shadow-[8px_8px_0px_0px_rgba(34,197,94,1)]">
                                         {result.analysis.score}
                                     </div>
-                                    <p className="mt-2 text-sm font-mono uppercase tracking-widest">Overall Score</p>
+                                    <p className="mt-2 text-sm font-mono uppercase tracking-widest">{t('analyze.overallScoreTitle')}</p>
                                 </div>
                             </div>
 
                             {/* Summary */}
                             <div className="glass-card bg-white">
-                                <h3 className="font-display font-bold text-2xl uppercase mb-4">Executive Summary</h3>
+                                <h3 className="font-display font-bold text-2xl uppercase mb-4">{t('analyze.executiveSummaryTitle')}</h3>
                                 <p className="text-lg leading-relaxed text-dark-800">{result.analysis.executiveSummary || result.analysis.summary}</p>
                             </div>
 
                             {/* Scores Grid */}
                             <div className="grid md:grid-cols-2 gap-6">
                                 <div className="brutal-card bg-white">
-                                    <h3 className="font-display font-bold text-xl uppercase mb-6 border-b-4 border-dark-100 pb-2">Sales Parameters</h3>
+                                    <h3 className="font-display font-bold text-xl uppercase mb-6 border-b-4 border-dark-100 pb-2">{t('analyze.salesParameters')}</h3>
                                     <div className="space-y-4">
-                                        <ScoreRow label="Needs Discovery" score={result.analysis.scoreNeedsDiscovery} />
-                                        <ScoreRow label="Value Proposition" score={result.analysis.scoreValueProposition} />
-                                        <ScoreRow label="Objection Handling" score={result.analysis.scoreObjectionHandling} />
-                                        <ScoreRow label="Decision Process" score={result.analysis.scoreDecisionProcess} />
-                                        <ScoreRow label="Closing" score={result.analysis.scoreNextSteps} />
+                                        <ScoreRow label={t('analyze.discovery')} score={result.analysis.scoreNeedsDiscovery} />
+                                        <ScoreRow label={t('analyze.presentation')} score={result.analysis.scoreValueProposition} />
+                                        <ScoreRow label={t('analyze.objectionHandling')} score={result.analysis.scoreObjectionHandling} />
+                                        <ScoreRow label={t('analyze.closing')} score={result.analysis.scoreNextSteps} />
                                     </div>
                                 </div>
 
                                 <div className="brutal-card bg-accent-50">
-                                    <h3 className="font-display font-bold text-xl uppercase mb-6 border-b-4 border-dark-900 pb-2">Cultural Intel</h3>
+                                    <h3 className="font-display font-bold text-xl uppercase mb-6 border-b-4 border-dark-900 pb-2">{t('analyze.culturalIntel')}</h3>
                                     <div className="space-y-4">
                                         {/* Fallback to raw_response if cultural properties aren't top level yet */}
-                                        <ScoreRow label="Cultural Appropriateness" score={result.analysis.scoreCulturalAppropriateness || result.analysis.raw_response?.cultural_scores?.scoreCulturalAppropriateness} />
+                                        <ScoreRow label={t('analyze.cultural_iq')} score={result.analysis.scoreCulturalAppropriateness || result.analysis.raw_response?.cultural_scores?.scoreCulturalAppropriateness} />
+                                        {/* Using existing labels or generic ones if unavailable */}
                                         <ScoreRow label="Formality Match" score={result.analysis.scoreLanguageFormality || result.analysis.raw_response?.cultural_scores?.scoreLanguageFormality} />
                                         <ScoreRow label="Protocol Adherence" score={result.analysis.scoreProtocolAdherence || result.analysis.raw_response?.cultural_scores?.scoreProtocolAdherence} />
                                         <ScoreRow label="Relationship Building" score={result.analysis.scoreRelationshipSensitivity || result.analysis.raw_response?.cultural_scores?.scoreRelationshipSensitivity} />
@@ -284,7 +283,7 @@ export function AnalyzePage() {
 
                             {/* Coaching Tips */}
                             <div className="bg-primary-100 border-l-8 border-primary-500 p-8 rounded-r-xl">
-                                <h3 className="font-display font-bold text-2xl uppercase mb-6 text-primary-900">Coaching Tips</h3>
+                                <h3 className="font-display font-bold text-2xl uppercase mb-6 text-primary-900">{t('analyze.coachingTipsTitle')}</h3>
                                 <div className="grid md:grid-cols-2 gap-4">
                                     {result.analysis.coachingTips?.map((tip: string, i: number) => (
                                         <div key={i} className="bg-white p-4 rounded-lg shadow-sm flex gap-3">
