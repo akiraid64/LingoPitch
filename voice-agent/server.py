@@ -132,7 +132,7 @@ async def start_session(request: SessionRequest):
     }
     
     # Hardcoded as requested
-    agent_id = "agent_bVJVHJEoXdAsKXL1hxrFMX"
+    agent_id = "agent_TXVb9TexBbvCqSQEkYNa4r"
     
     # Corrected URL format: /agents/stream/{agent_id}
     websocket_url = f"wss://api.cartesia.ai/agents/stream/{agent_id}"
