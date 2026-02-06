@@ -89,24 +89,23 @@ Cultural resonance is treated as a core architectural layer rather than a second
 
 ## Technical Architecture Overview
 
----
+LingoPitch is built on a distributed AI architecture that handles high-concurrency voice streams and complex data retrieval. The system is designed to provide a "live" feel by offloading heavy computational tasks to specialized AI engines.
 
-## Technical Context
+### Intelligent Localization (Lingo.dev)
+The platform treats language not as a static setting, but as a dynamic layer. Using the **Lingo.dev SDK**, every UI string and AI response moves through a localization pipeline that preserves cultural nuances. When a user switches target markets, the system doesn't just translate text; it re-aligns the entire interface and AI personality to match regional business protocols. This ensures that a sales coaching session in Japanese feels fundamentally different from one in English.
 
-### Folder: backend/src/
-- **index.ts**: Main entry point; registers all API route groups.
-- **routes/**: Endpoint definitions for Analytics, Chat, Roleplay, etc.
-- **services/**: Core logic layer (Analysis, Chat, Roleplay, Translation).
-- **lib/**: supabase.ts initialization.
+### Contextual Advisory (AI Co-pilot)
+The AI Sales Advisor acts as a "Mission Control" by performing high-dimensional reasoning across four distinct data streams:
+- **Historical Context:** It ingests all past call transcripts and performance scores to identify long-term trends.
+- **Team Dynamics:** It understands organizational roles, allowing for persona-specific advice (e.g., manager-level team summaries vs. rep-level coaching).
+- **RAG Methodology:** The system performs a vector search against PDF playbooks to ensure advice is strictly grounded in the company's "Source of Truth."
+- **Semantic Cross-Linking:** The "Co-pilot" logic identifies the delta between what the playbook required and what the rep actually said in the transcript, providing surgical coaching on missed opportunities.
 
-### Folder: frontend/src/
-- **pages/**: UI Components (Arena, Settings, Team Analytics, Advisor).
-- **services/**: API Fetch wrapper and WebSocket client.
-- **store/**: languageStore.ts managing global locale state.
-- **contexts/**: Auth and Translation contexts.
-
-### Folder: voice-agent/ (Python Bridge)
-- **server.py**: FastAPI server acting as a bridge to Cartesia.
+### Ultra-Low Latency Voice & Persona Engine
+Achieving natural conversation requires a complex orchestration of three distinct layers:
+1. **Persona Definition:** The "soul" of the voice agent is generated via a specialized **Persona Recrafting** engine. When a manager updates the product context, Gemini synthesizes a deep-dive profile (Pain points, behavioral triggers, and cultural biases) which is stored as a persistent JSON identity.
+2. **Cold-Start Synthesis:** At the start of every session, the system combines this deep persona with regional business protocols and relevant playbook chunks to create a "Cold Start" system prompt that "hardens" the AI customer's behavior.
+3. **Voice Hardware Bridge:** A FastAPI server handles the direct WebSocket handshake with Cartesia, streaming raw audio at sub-200ms latency to ensure the interaction feels human and immediate.
 
 ---
 
