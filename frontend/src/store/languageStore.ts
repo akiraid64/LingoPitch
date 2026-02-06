@@ -48,6 +48,8 @@ interface LanguageState {
     loadAvailableLanguages: () => Promise<void>;
 }
 
+const API_URL = (import.meta as any).env.VITE_API_URL || 'http://localhost:3001';
+
 export const useLanguageStore = create<LanguageState>()(
     persist(
         (set, get) => ({
@@ -74,7 +76,7 @@ export const useLanguageStore = create<LanguageState>()(
 
                 try {
                     // Fetch language info
-                    const langInfo = await fetch(`/api/language/info?code=${langCode}`)
+                    const langInfo = await fetch(`${API_URL}/api/language/info?code=${langCode}`)
                         .then(res => res.json());
 
                     // Fetch cultural profile
@@ -120,7 +122,7 @@ export const useLanguageStore = create<LanguageState>()(
 
             fetchCulturalProfile: async (langCode: string) => {
                 try {
-                    const response = await fetch(`/api/cultural/profile?lang=${langCode}`);
+                    const response = await fetch(`${API_URL}/api/cultural/profile?lang=${langCode}`);
                     const data = await response.json();
 
                     set({ culturalProfile: data.profile });
@@ -132,7 +134,7 @@ export const useLanguageStore = create<LanguageState>()(
 
             loadAvailableLanguages: async () => {
                 try {
-                    const response = await fetch('/api/language/supported');
+                    const response = await fetch(`${API_URL}/api/language/supported`);
                     const data = await response.json();
                     set({ availableLanguages: data.languages });
                 } catch (error) {
