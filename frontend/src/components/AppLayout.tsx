@@ -97,7 +97,7 @@ function TranslatableContentWrapper({ children, targetLocale, path }: { children
             // innerHTML replacement kills React listeners (onClick, onSubmit), 
             // so we skip full-page translation for them completely.
             // They should rely on UI-String translation (nav/sidebar) or internal translation logic.
-            const skippedRoutes = ['/advisor', '/arena', '/team', '/progress', '/settings'];
+            const skippedRoutes = ['/advisor', '/arena', '/team', '/progress', '/settings', '/analyze'];
             if (skippedRoutes.some(route => path.includes(route))) {
                 console.log(`[AppLayout] ⚠️ Skipping translation for interactive route: ${path}`);
                 return;

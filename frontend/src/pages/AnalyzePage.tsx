@@ -11,12 +11,14 @@ export function AnalyzePage() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [result, setResult] = useState<CallAnalysisResponse | null>(null);
+    const [fileName, setFileName] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
+        setFileName(file.name);
         const reader = new FileReader();
         reader.onload = (event) => {
             const text = event.target?.result as string;
@@ -98,24 +100,34 @@ export function AnalyzePage() {
                             Input Transcript
                         </h2>
 
+                        {/* Hidden File Input */}
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileUpload}
+                            accept=".txt,.vtt,.srt"
+                            style={{ position: 'absolute', width: '1px', height: '1px', padding: '0', margin: '-1px', overflow: 'hidden', clip: 'rect(0,0,0,0)', border: '0' }}
+                        />
+
                         {/* File Upload Button */}
                         <div
                             onClick={() => fileInputRef.current?.click()}
                             className="border-3 border-dashed border-dark-200 hover:border-primary-500 hover:bg-primary-50 
-                                     rounded-xl p-8 mb-6 cursor-pointer transition-colors text-center group"
+                                     rounded-xl p-8 mb-6 cursor-pointer transition-colors text-center group relative"
                         >
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleFileUpload}
-                                accept=".txt,.vtt,.srt"
-                                className="hidden"
-                            />
                             <div className="w-16 h-16 mx-auto mb-4 bg-dark-100 rounded-full flex items-center justify-center group-hover:bg-primary-200 transition-colors">
-                                <FileText className="w-8 h-8 text-dark-500 group-hover:text-primary-700" />
+                                {fileName ? (
+                                    <CheckCircle className="w-8 h-8 text-green-600" />
+                                ) : (
+                                    <FileText className="w-8 h-8 text-dark-500 group-hover:text-primary-700" />
+                                )}
                             </div>
-                            <p className="font-bold text-dark-700">Click to upload .txt or .vtt</p>
-                            <p className="text-sm text-dark-500">or paste text below</p>
+                            <p className="font-bold text-dark-700">
+                                {fileName ? `Selected: ${fileName}` : 'Click to upload .txt or .vtt'}
+                            </p>
+                            <p className="text-sm text-dark-500">
+                                {fileName ? 'Click again to change' : 'or paste text below'}
+                            </p>
                         </div>
 
                         {/* Text Area */}
