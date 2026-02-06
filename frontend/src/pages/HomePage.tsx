@@ -11,7 +11,7 @@ import {
 import { useLanguageStore } from '@/store/languageStore';
 
 export function HomePage() {
-    const { currentLanguageInfo, availableLanguages } = useLanguageStore();
+    const { currentLanguageInfo } = useLanguageStore();
 
     return (
         <div className="overflow-hidden">
