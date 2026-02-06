@@ -9,7 +9,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 }
 
 // Service role client for backend operations (bypasses RLS)
-export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
     auth: {
         autoRefreshToken: false,
         persistSession: false,
@@ -18,7 +18,7 @@ export const supabaseAdmin = createClient<Database>(supabaseUrl, supabaseService
 
 // Create a client with user's JWT for RLS-protected operations
 export const createSupabaseClient = (accessToken: string) => {
-    return createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    return createClient(supabaseUrl, supabaseServiceKey, {
         global: {
             headers: {
                 Authorization: `Bearer ${accessToken}`,
