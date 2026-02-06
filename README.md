@@ -5,13 +5,20 @@
 
 LingoPitch is a **Universal Sales Hardening Platform** designed to prepare sales teams for any global market from a single interface. Instead of forcing teams to adapt to a "one-size-fits-all" Western sales methodology, LingoPitch uses AI to adapt its behavior to the localized business norms of your customer.
 
-The platform integrates **Cartesia's ultra-low latency voice** with **Gemini's strategic intelligence** and **Lingo.dev's cultural localization** to facilitate high-stakes sales conversations in multiple languages against dynamically generated cultural personas.
-
 ---
 
 ## Try the App Live
 You can access the production environment here:
 **[https://sublime-nature-production.up.railway.app/](https://sublime-nature-production.up.railway.app/)**
+
+---
+
+## How It Works: A Visual Guide
+![LingoPitch Platform Summary](Gemini_Generated_Image_pfuokppfuokppfuo.png)
+
+---
+
+The platform integrates **Cartesia's ultra-low latency voice** with **Gemini's strategic intelligence** and **Lingo.dev's cultural localization** to facilitate high-stakes sales conversations in multiple languages against dynamically generated cultural personas.
 
 ---
 
@@ -67,8 +74,8 @@ Cultural resonance is treated as a core architectural layer rather than a second
 
 ### 1. The Arena (Voice-to-Voice Simulation)
 - **Cartesia Voice Agent:** Sub-200ms latency for natural, flowing conversations.
-- **Dynamic Regional Personas:** Customers adapt behavior based on region (e.g., blunt ROI-focused German vs. polite British director).
-- **Infinite Objection Handling:** AI pushes back with tough objections and regional negotiation styles.
+- **Language and Accent Aware Personas:** The AI agent doesn't just speak the language; it adopts the regional accent and business behavior of the selected locale (e.g., a formal British director vs. a casual Australian startup founder).
+- **Infinite Objection Handling:** AI pushes back with tough objections and negotiation styles unique to the targeted cultural market.
 
 ### 2. Manager Mission Command (Admin Control)
 - **Organization Settings:** Define the "Source of Truth" for your product.
@@ -89,6 +96,8 @@ Cultural resonance is treated as a core architectural layer rather than a second
 
 ## Technical Architecture Overview
 
+![LingoPitch Platform Architecture](Gemini_Generated_Image_y24wt5y24wt5y24w.png)
+
 LingoPitch is built on a distributed AI architecture that handles high-concurrency voice streams and complex data retrieval. The system is designed to provide a "live" feel by offloading heavy computational tasks to specialized AI engines.
 
 ### Intelligent Localization (Lingo.dev)
@@ -104,8 +113,9 @@ The AI Sales Advisor acts as a "Mission Control" by performing high-dimensional 
 ### Ultra-Low Latency Voice & Persona Engine
 Achieving natural conversation requires a complex orchestration of three distinct layers:
 1. **Persona Definition:** The "soul" of the voice agent is generated via a specialized **Persona Recrafting** engine. When a manager updates the product context, Gemini synthesizes a deep-dive profile (Pain points, behavioral triggers, and cultural biases) which is stored as a persistent JSON identity.
-2. **Cold-Start Synthesis:** At the start of every session, the system combines this deep persona with regional business protocols and relevant playbook chunks to create a "Cold Start" system prompt that "hardens" the AI customer's behavior.
-3. **Voice Hardware Bridge:** A FastAPI server handles the direct WebSocket handshake with Cartesia, streaming raw audio at sub-200ms latency to ensure the interaction feels human and immediate.
+2. **Dynamic Adaptation:** At the start of every session, the system injects the **selected language and specific accent** into the persona. This ensures the AI customer's tone, vocabulary, and phonetic delivery are perfectly aligned with the trainee's target market.
+3. **Cold-Start Synthesis:** The deep persona is combined with regional business protocols and relevant playbook chunks to create a "Cold Start" system prompt that "hardens" the AI customer's behavior and cultural persona.
+4. **Voice Hardware Bridge:** A FastAPI server handles the direct WebSocket handshake with Cartesia, streaming raw audio at sub-200ms latency to ensure the interaction feels human and immediate.
 
 ---
 
@@ -118,7 +128,7 @@ Achieving natural conversation requires a complex orchestration of three distinc
 
 ---
 
-## Strategic Roadmap (2026 Focus)
+## Strategic Roadmap
 
 ### Current Limitations
 - **Non-Verbal Blindness:** Visual cues (body language, gestures) are not currently tracked or analyzed.
