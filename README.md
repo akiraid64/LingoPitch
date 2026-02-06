@@ -11,7 +11,7 @@ LingoPitch is a **Universal Sales Hardening Platform** designed to prepare sales
 
 **[Access the LingoPitch Production App](https://sublime-nature-production.up.railway.app/)**
 
-[![LingoPitch Walkthrough Video](https://img.youtube.com/vi/PWKJZ_ZJSxg/0.jpg)](https://youtu.be/PWKJZ_ZJSxg)
+**[Watch the LingoPitch Walkthrough Video here](https://youtu.be/PWKJZ_ZJSxg)**
 
 In this video, I walk you through LingoPitch, a platform designed to train sales agents globally, regardless of their cultural backgrounds. I demonstrate how to analyze calls, focusing on cultural nuances and coaching tips, with examples from the US and Japan. I also highlight the roleplay feature for customer interactions and how managers can track team performance and analytics. While I encountered challenges with language formality, I emphasize the importance of adapting communication styles. Please explore the platform and familiarize yourself with its features to enhance our training efforts.
 
