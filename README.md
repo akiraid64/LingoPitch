@@ -50,9 +50,9 @@ Sales reps often struggle because:
 ---
 
 ## Demo and Overview
-> [!NOTE]
-> *Space reserved for YouTube Walkthrough Video*
-> [![LingoPitch Demo](https://img.shields.io/badge/YouTube-Watch%20Demo-red)](https://youtube.com)
+
+<div style="position: relative; padding-bottom: 56.25%; height: 0;"><iframe src="https://www.loom.com/embed/a50af822289d4d3ea5d4258dc1430c36" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></iframe></div>
+
 
 ---
 
