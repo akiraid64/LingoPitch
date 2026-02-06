@@ -13,7 +13,7 @@ function Timer({ isRunning }: { isRunning: boolean }) {
     const [seconds, setSeconds] = useState(0);
 
     useEffect(() => {
-        let interval: NodeJS.Timeout;
+        let interval: ReturnType<typeof setTimeout>;
         if (isRunning) {
             interval = setInterval(() => {
                 setSeconds(s => s + 1);

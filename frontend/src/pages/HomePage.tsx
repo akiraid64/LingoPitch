@@ -1,15 +1,12 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
-    Globe2,
     Mic,
-    BarChart3,
     Sparkles,
     ArrowRight,
     Languages,
     Brain,
-    Target,
-    TrendingUp
+    Target
 } from 'lucide-react';
 import { useLanguageStore } from '@/store/languageStore';
 
