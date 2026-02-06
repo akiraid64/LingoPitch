@@ -87,12 +87,18 @@ export async function generateRoleplayPrompt({ languageCode, langInfo, productDe
             .single();
 
         if (orgData?.roleplay_scenario) {
-            console.log(`[ROLEPLAY] 📋 Using persistent Org Scenario`);
+            console.log(`[ROLEPLAY] 📋 Using persistent Org Scenario (Length: ${orgData.roleplay_scenario.length})`);
+            console.log(`[ROLEPLAY] 📋 Scenario Preview: ${orgData.roleplay_scenario.substring(0, 100)}...`);
             orgScenario = orgData.roleplay_scenario;
+        } else {
+            console.log('[ROLEPLAY] ⚠️ Org found but no roleplay_scenario, using default/productDescription');
         }
+    } else {
+        console.log('[ROLEPLAY] ℹ️ No Org ID provided, using global default');
     }
 
     console.log(`[ROLEPLAY] 🤖 Calling Gemini 2.5 Flash to generate prompt...`);
+    console.log(`[ROLEPLAY] 🔍 Input Scenario for Generation: "${orgScenario.substring(0, 50)}..."`);
 
     // Generate with Gemini
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);

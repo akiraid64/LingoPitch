@@ -64,6 +64,7 @@ export function ArenaPage() {
             setIsGeneratingPrompt(true);
             try {
                 const orgId = profile?.organizations?.id || '';
+                console.log(`[ARENA] 📥 Fetching prompt for Org: ${orgId || 'None (Global)'}`);
                 const response = await fetch(`${API_URL}/api/roleplay/prompt/${targetLocale}?orgId=${orgId}`);
                 if (response.ok) {
                     const data = await response.json();
