@@ -91,54 +91,22 @@ Cultural resonance is treated as a core architectural layer rather than a second
 
 ---
 
-## API Reference (Endpoint Index)
-
-### Infrastructure and Localization
-- `GET /api/language/supported`: List all 80+ supported locales.
-- `POST /api/language/detect`: Auto-detect language from input text.
-- `POST /api/translation/translate`: Real-time text translation.
-- `POST /api/translation/ui-strings`: Localize large JSON objects of UI strings.
-
-### Organization and Profiles
-- `POST /api/organization/:id/settings`: Update product context and trigger Persona Recrafting.
-- `GET /api/profiles/:userId`: Retrieve user stats and Cultural IQ.
-- `PATCH /api/profiles/:userId/stats`: Update performance metrics after a session.
-
-### Voice and Roleplay
-- `POST /api/roleplay/generate-prompt`: (Gemini) Create the high-fidelity persona system prompt.
-- `POST /api/voice-agent/start-session`: Proxies to Python bridge to initialize Cartesia.
-- `POST /api/voice-agent/end-session`: Processes audio buffer, transcribes with Gemini, and saves transcripts.
-
-### Analytics and Advisor
-- `POST /api/calls`: Manual call analysis creation.
-- `GET /api/calls/user/:userId`: User's call history with detailed scores.
-- `POST /api/chat`: High-context Sales Advisor Chat (Playbooks + History).
-- `POST /api/playbooks/upload`: Index PDF sales playbooks into RAG memory (Supabase).
-
----
-
-## Technical Context and File Index
+## Technical Context
 
 ### Folder: backend/src/
-- **index.ts**: Main entry point; registers all 12+ API route groups.
+- **index.ts**: Main entry point; registers all API route groups.
 - **routes/**: Endpoint definitions for Analytics, Chat, Roleplay, etc.
-- **services/**: Core logic layer.
-    - analysisService.ts: Post-call performance evaluation logic.
-    - chatService.ts: Context loading (Transcripts/Playbooks) for the AI Advisor.
-    - roleplayService.ts: Gemini prompt factory for cultural personas.
-    - translationService.ts: Lingo.dev SDK wrapper.
+- **services/**: Core logic layer (Analysis, Chat, Roleplay, Translation).
 - **lib/**: supabase.ts initialization.
 
 ### Folder: frontend/src/
 - **pages/**: UI Components (Arena, Settings, Team Analytics, Advisor).
-- **services/**:
-    - api.ts: Typed Fetch wrapper for the backend.
-    - cartesiaClient.ts: Direct WebSocket management for ultra-low latency voice.
-- **store/**: languageStore.ts (Zustand) managing global locale state.
-- **contexts/**: AuthContext.tsx and TranslationContext.tsx.
+- **services/**: API Fetch wrapper and WebSocket client.
+- **store/**: languageStore.ts managing global locale state.
+- **contexts/**: Auth and Translation contexts.
 
 ### Folder: voice-agent/ (Python Bridge)
-- **server.py**: FastAPI server acting as a bridge to Cartesia's Hosted Calls API. Handles access token generation and WebSocket streaming URLs.
+- **server.py**: FastAPI server acting as a bridge to Cartesia.
 
 ---
 
